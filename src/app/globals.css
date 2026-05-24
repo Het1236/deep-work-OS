@@ -424,3 +424,9 @@ body {
 .animate-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
 }
+
+/* ---- DRIP Badge Colors ---- */
+.drip-badge-producing { background: rgba(150, 250, 194, 0.12) !important; color: #96fac2 !important; border: 1px solid rgba(150, 250, 194, 0.3) !important; }
+.drip-badge-investing { background: rgba(245, 166, 35, 0.12) !important; color: #F5A623 !important; border: 1px solid rgba(245, 166, 35, 0.3) !important; }
+.drip-badge-recharging { background: rgba(91, 155, 213, 0.12) !important; color: #5B9BD5 !important; border: 1px solid rgba(91, 155, 213, 0.3) !important; }
+.drip-badge-draining { background: rgba(232, 93, 93, 0.12) !important; color: #E85D5D !important; border: 1px solid rgba(232, 93, 93, 0.3) !important; }

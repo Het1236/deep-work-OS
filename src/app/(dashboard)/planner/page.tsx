@@ -195,9 +195,32 @@ export default function PlannerPage() {
             <span className="slot-range">{slotLabel(i)} — {slotLabel(localEnd)}</span>
             <span className="slot-dur">{span * 30}m</span>
             {!isEd && (
-              <button className="slot-del" onClick={() => handleDelete(block.id)}>
-                <Trash2 size={12}/>
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', position: 'absolute', top: '12px', right: '12px' }}>
+                {(block.block_type === 'deep_work' || block.block_type === 'wig') && (
+                  <button
+                    className="nav-today"
+                    style={{ fontSize: '0.625rem', padding: '3px 8px', borderRadius: '4px', background: 'rgba(76,175,125,0.12)', borderColor: 'rgba(76,175,125,0.4)', color: 'var(--accent)' }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      window.location.href = `/timer?taskId=${block.task_id || ''}&projectId=${block.project_id || ''}&label=${encodeURIComponent(block.title)}`
+                    }}
+                  >
+                    Focus
+                  </button>
+                )}
+                <button
+                  className="slot-del-inline"
+                  style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: '4px', transition: 'color 0.15s' }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleDelete(block.id)
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.color = '#f44336'}
+                  onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-tertiary)'}
+                >
+                  <Trash2 size={12}/>
+                </button>
+              </div>
             )}
           </div>
 

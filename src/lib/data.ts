@@ -471,6 +471,17 @@ export async function updateTaskStatus(taskId: string, status: string) {
   if (error) throw error
 }
 
+export async function updateTask(taskId: string, updates: Partial<Task>) {
+  const { data, error } = await supabase
+    .from('tasks')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', taskId)
+    .select()
+    .single()
+  if (error) throw error
+  return data as Task
+}
+
 export async function deleteTask(taskId: string) {
   const { error } = await supabase
     .from('tasks')
@@ -709,9 +720,11 @@ export async function getGroupWeeklyStats(memberIds: string[]) {
 
 // ─── Utility: XP Level Calculation ────────────
 export function calculateLevel(xpTotal: number) {
-  const level = Math.floor(xpTotal / 1000) + 1
-  const xpInLevel = xpTotal % 1000
-  const xpForNext = 1000
+  const level = Math.max(1, Math.floor(Math.sqrt(xpTotal / 100)))
+  const xpStartCurrent = level === 1 ? 0 : level * level * 100
+  const xpStartNext = (level + 1) * (level + 1) * 100
+  const xpInLevel = xpTotal - xpStartCurrent
+  const xpForNext = xpStartNext - xpStartCurrent
   const progress = (xpInLevel / xpForNext) * 100
   return { level, xpInLevel, xpForNext, progress }
 }
@@ -762,70 +775,217 @@ export async function awardXP(
   return { xpAwarded: xp, newTotal, leveledUp: newLevel > oldLevel }
 }
 
-// Badge definitions with check logic
-type BadgeCheck = {
-  key: string
-  check: (ctx: BadgeContext) => boolean
-}
-
-type BadgeContext = {
-  totalHours: number
-  streakCurrent: number
-  sessionCount: number
-  shutdownCount: number
-  achievements: Achievement[]
-}
-
-const BADGE_CHECKS: BadgeCheck[] = [
-  { key: 'first_session', check: (ctx) => ctx.sessionCount >= 1 },
-  { key: 'week_warrior', check: (ctx) => ctx.streakCurrent >= 7 },
-  { key: 'habit_streak_7', check: (ctx) => ctx.streakCurrent >= 7 },
-  { key: '100_hours', check: (ctx) => ctx.totalHours >= 100 },
-  { key: 'shutdown_30', check: (ctx) => ctx.shutdownCount >= 30 },
-]
-
 export async function checkAndAwardBadges(userId: string): Promise<string[]> {
-  // Gather context
-  const [profile, achievements] = await Promise.all([
-    getProfile(userId),
-    getAchievements(userId),
-  ])
-
-  // Count total session hours
-  const { data: sessions } = await supabase
+  // 1. Recalculate deep work session streak
+  const { data: allSessions } = await supabase
     .from('deep_work_sessions')
-    .select('duration_minutes')
+    .select('session_date, duration_minutes, quality_score')
     .eq('user_id', userId)
-    .not('duration_minutes', 'is', null)
-  const totalHours = (sessions || []).reduce((s, r) => s + ((r.duration_minutes || 0) / 60), 0)
+    .order('session_date', { ascending: true })
 
-  // Count shutdown rituals (journal entries with shutdown_done)
+  // Compute unique session dates
+  const sessionDates = Array.from(new Set((allSessions || []).map(s => s.session_date))).filter(Boolean) as string[]
+  
+  // Calculate deep work streaks
+  let dwStreakCurrent = 0
+  let dwStreakMax = 0
+  if (sessionDates.length > 0) {
+    const todayStr = new Date().toISOString().split('T')[0]
+    const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+    
+    // Sort dates
+    sessionDates.sort()
+    
+    // Calculate dwStreakMax
+    let currentRun = 0
+    let lastDate: Date | null = null
+    for (const dStr of sessionDates) {
+      const currentDate = new Date(dStr)
+      if (lastDate) {
+        const diffTime = Math.abs(currentDate.getTime() - lastDate.getTime())
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        if (diffDays === 1) {
+          currentRun++
+        } else if (diffDays > 1) {
+          dwStreakMax = Math.max(dwStreakMax, currentRun)
+          currentRun = 1
+        }
+      } else {
+        currentRun = 1
+      }
+      lastDate = currentDate
+    }
+    dwStreakMax = Math.max(dwStreakMax, currentRun)
+    
+    // Calculate dwStreakCurrent
+    const lastSessionDateStr = sessionDates[sessionDates.length - 1]
+    if (lastSessionDateStr === todayStr || lastSessionDateStr === yesterdayStr) {
+      let currentRunBack = 0
+      let expectedDate = new Date(lastSessionDateStr)
+      const sessionDatesSet = new Set(sessionDates)
+      while (sessionDatesSet.has(expectedDate.toISOString().split('T')[0])) {
+        currentRunBack++
+        expectedDate.setDate(expectedDate.getDate() - 1)
+      }
+      dwStreakCurrent = currentRunBack
+    } else {
+      dwStreakCurrent = 0
+    }
+  }
+
+  // Update profile with recalculated deep work streaks
+  const { data: currentProfile } = await supabase
+    .from('profiles')
+    .select('streak_max')
+    .eq('id', userId)
+    .single()
+  const newStreakMax = Math.max(currentProfile?.streak_max || 0, dwStreakMax)
+  await supabase
+    .from('profiles')
+    .update({
+      streak_current: dwStreakCurrent,
+      streak_max: newStreakMax,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', userId)
+
+  // 2. Recalculate habit completion streak
+  const { data: allHabitLogs } = await supabase
+    .from('habit_logs')
+    .select('habit_id, log_date, completed')
+    .eq('user_id', userId)
+    .eq('completed', true)
+    .order('log_date', { ascending: true })
+
+  // Group by habit_id
+  const habitLogsMap: Record<string, string[]> = {}
+  for (const log of (allHabitLogs || [])) {
+    if (!habitLogsMap[log.habit_id]) {
+      habitLogsMap[log.habit_id] = []
+    }
+    habitLogsMap[log.habit_id].push(log.log_date)
+  }
+
+  let maxHabitStreak = 0
+  for (const habitId in habitLogsMap) {
+    const dates = Array.from(new Set(habitLogsMap[habitId])).sort()
+    if (dates.length > 0) {
+      let currentRun = 0
+      let lastDate: Date | null = null
+      let habitStreakMax = 0
+      for (const dStr of dates) {
+        const currentDate = new Date(dStr)
+        if (lastDate) {
+          const diffTime = Math.abs(currentDate.getTime() - lastDate.getTime())
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+          if (diffDays === 1) {
+            currentRun++
+          } else if (diffDays > 1) {
+            habitStreakMax = Math.max(habitStreakMax, currentRun)
+            currentRun = 1
+          }
+        } else {
+          currentRun = 1
+        }
+        lastDate = currentDate
+      }
+      habitStreakMax = Math.max(habitStreakMax, currentRun)
+      maxHabitStreak = Math.max(maxHabitStreak, habitStreakMax)
+    }
+  }
+
+  // 3. Count total session hours
+  const totalHours = (allSessions || []).reduce((s, r) => s + ((r.duration_minutes || 0) / 60), 0)
+
+  // 4. Count shutdown rituals (journal entries with shutdown_done)
   const { count: shutdownCount } = await supabase
     .from('journal_entries')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
     .eq('shutdown_done', true)
 
-  const ctx: BadgeContext = {
-    totalHours,
-    streakCurrent: profile?.streak_current || 0,
-    sessionCount: (sessions || []).length,
-    shutdownCount: shutdownCount || 0,
-    achievements,
+  // 5. Max quality score
+  const maxQualityScore = (allSessions || []).reduce((max, s) => {
+    const q = Number(s.quality_score) || 0
+    return q > max ? q : max
+  }, 0)
+
+  // 6. Perfect week check
+  let hasPerfectWeek = false
+  if (totalHours >= 25) {
+    const { count: totalActiveHabits } = await supabase
+      .from('habits')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_active', true)
+    
+    if (totalActiveHabits && totalActiveHabits > 0) {
+      const weeklyHours: Record<string, number> = {}
+      const weeklyHabitCompletions: Record<string, Set<string>> = {}
+      
+      const getWeekKey = (dateStr: string) => {
+        const d = new Date(dateStr)
+        const day = d.getDay()
+        const sun = new Date(d)
+        sun.setDate(d.getDate() - day)
+        return sun.toISOString().split('T')[0]
+      }
+
+      for (const s of (allSessions || [])) {
+        if (!s.session_date) continue
+        const wk = getWeekKey(s.session_date)
+        weeklyHours[wk] = (weeklyHours[wk] || 0) + ((s.duration_minutes || 0) / 60)
+      }
+
+      const { data: allLogs } = await supabase
+        .from('habit_logs')
+        .select('habit_id, log_date, completed')
+        .eq('user_id', userId)
+      
+      for (const log of (allLogs || [])) {
+        if (!log.completed) continue
+        const wk = getWeekKey(log.log_date)
+        if (!weeklyHabitCompletions[wk]) {
+          weeklyHabitCompletions[wk] = new Set()
+        }
+        weeklyHabitCompletions[wk].add(`${log.habit_id}_${log.log_date}`)
+      }
+
+      for (const wk in weeklyHours) {
+        if (weeklyHours[wk] >= 25) {
+          const expectedCompletions = totalActiveHabits * 7
+          const completedCount = weeklyHabitCompletions[wk]?.size || 0
+          if (completedCount >= expectedCompletions) {
+            hasPerfectWeek = true
+            break
+          }
+        }
+      }
+    }
   }
 
+  // 7. Get already earned achievements
+  const achievements = await getAchievements(userId)
   const earnedKeys = new Set(achievements.map(a => a.badge_key))
   const newBadges: string[] = []
 
-  for (const badge of BADGE_CHECKS) {
-    if (!earnedKeys.has(badge.key) && badge.check(ctx)) {
+  const checkBadge = async (key: string, condition: boolean) => {
+    if (!earnedKeys.has(key) && condition) {
       await supabase.from('achievements').insert({
         user_id: userId,
-        badge_key: badge.key,
+        badge_key: key,
       })
-      newBadges.push(badge.key)
+      newBadges.push(key)
     }
   }
+
+  await checkBadge('first_session', (allSessions || []).length >= 1)
+  await checkBadge('week_warrior', dwStreakCurrent >= 7)
+  await checkBadge('habit_streak_7', maxHabitStreak >= 7)
+  await checkBadge('100_hours', totalHours >= 100)
+  await checkBadge('shutdown_30', (shutdownCount || 0) >= 30)
+  await checkBadge('quality_8', maxQualityScore >= 8)
+  await checkBadge('perfect_week', hasPerfectWeek)
 
   return newBadges
 }
