@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+                  "on-tertiary-fixed": "#003840",
+                  "surface-variant": "#262626",
+                  "surface-container-high": "#201f1f",
+                  "error": "#ff716c",
+                  "surface-container-low": "#131313",
+                  "on-background": "#ffffff",
+                  "on-primary-fixed-variant": "#006b44",
+                  "on-tertiary-fixed-variant": "#005763",
+                  "on-primary": "#00603c",
+                  "surface-container-lowest": "#000000",
+                  "secondary-dim": "#50edbe",
+                  "secondary": "#62fccb",
+                  "on-primary-fixed": "#004b2e",
+                  "on-primary-container": "#002917",
+                  "surface-dim": "#0e0e0e",
+                  "outline": "#767575",
+                  "on-surface-variant": "#adaaaa",
+                  "on-secondary-fixed": "#004936",
+                  "tertiary-dim": "#00d4ed",
+                  "primary-fixed": "#96fac2",
+                  "on-error": "#490006",
+                  "surface-tint": "#96fac2",
+                  "on-secondary-container": "#dffff0",
+                  "tertiary-fixed-dim": "#00d4ed",
+                  "background": "#0e0e0e",
+                  "on-tertiary-container": "#004d57",
+                  "secondary-container": "#006c52",
+                  "error-dim": "#d7383b",
+                  "on-error-container": "#ffa8a3",
+                  "primary-container": "#50b380",
+                  "tertiary": "#84ecff",
+                  "primary-dim": "#88ebb4",
+                  "tertiary-container": "#00e3fe",
+                  "on-surface": "#ffffff",
+                  "primary": "#96fac2",
+                  "surface-container-highest": "#262626",
+                  "primary-fixed-dim": "#88ebb4",
+                  "secondary-fixed-dim": "#50edbe",
+                  "error-container": "#9f0519",
+                  "surface-container": "#1a1919",
+                  "inverse-on-surface": "#565555",
+                  "secondary-fixed": "#62fccb",
+                  "on-secondary": "#005d47",
+                  "inverse-primary": "#006d45",
+                  "outline-variant": "#484847",
+                  "surface": "#0e0e0e",
+                  "tertiary-fixed": "#00e3fe",
+                  "on-secondary-fixed-variant": "#00684f",
+                  "on-tertiary": "#005762",
+                  "inverse-surface": "#fcf9f8"
+          },
+          "borderRadius": {
+                  "DEFAULT": "0.125rem",
+                  "lg": "0.25rem",
+                  "xl": "0.5rem",
+                  "full": "0.75rem"
+          },
+          "fontFamily": {
+                  "headline": ["Manrope"],
+                  "body": ["Manrope"],
+                  "label": ["Manrope"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    body { font-family: 'Manrope', sans-serif; }
+    .glass-card {
+      background: rgba(26, 25, 25, 0.7);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .text-gradient {
+      background: linear-gradient(135deg, #96fac2 0%, #50b380 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .bg-gradient-primary {
+      background: linear-gradient(135deg, #96fac2 0%, #50b380 100%);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen">
+<!-- SideNavBar -->
+<aside class="h-screen w-64 fixed left-0 top-0 border-r border-white/10 bg-[#0e0e0e] flex flex-col p-6 space-y-4 z-50">
+<div class="mb-8">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container text-xl" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+<div>
+<h1 class="text-lg font-black text-white leading-none">Obsidian Kinetic</h1>
+<p class="font-manrope uppercase tracking-widest text-[10px] font-medium text-[#adaaaa] mt-1">Peak Performance</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-[#96fac2] bg-[#96fac2]/10 rounded-md transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-xl">dashboard</span>
+<span class="font-manrope uppercase tracking-widest text-[10px] font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#adaaaa] hover:text-white hover:bg-white/5 rounded-md transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-xl">leaderboard</span>
+<span class="font-manrope uppercase tracking-widest text-[10px] font-medium">Scoreboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#adaaaa] hover:text-white hover:bg-white/5 rounded-md transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-xl">trending_up</span>
+<span class="font-manrope uppercase tracking-widest text-[10px] font-medium">Evolution</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#adaaaa] hover:text-white hover:bg-white/5 rounded-md transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-xl">repeat</span>
+<span class="font-manrope uppercase tracking-widest text-[10px] font-medium">Habits</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#adaaaa] hover:text-white hover:bg-white/5 rounded-md transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-xl">inventory_2</span>
+<span class="font-manrope uppercase tracking-widest text-[10px] font-medium">Projects</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#adaaaa] hover:text-white hover:bg-white/5 rounded-md transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-xl">flag</span>
+<span class="font-manrope uppercase tracking-widest text-[10px] font-medium">Goals</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#adaaaa] hover:text-white hover:bg-white/5 rounded-md transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-xl">edit_note</span>
+<span class="font-manrope uppercase tracking-widest text-[10px] font-medium">Journals</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#adaaaa] hover:text-white hover:bg-white/5 rounded-md transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-xl">calendar_month</span>
+<span class="font-manrope uppercase tracking-widest text-[10px] font-medium">Calendar</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#adaaaa] hover:text-white hover:bg-white/5 rounded-md transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-xl">psychology</span>
+<span class="font-manrope uppercase tracking-widest text-[10px] font-medium">AI Reports</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#adaaaa] hover:text-white hover:bg-white/5 rounded-md transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-xl">group</span>
+<span class="font-manrope uppercase tracking-widest text-[10px] font-medium">Group</span>
+</a>
+</nav>
+<div class="pt-6">
+<button class="w-full py-3 bg-gradient-primary text-on-primary-container font-bold rounded-md text-xs uppercase tracking-widest transition-transform active:scale-95">
+        New Focus Session
+      </button>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="ml-64 min-h-screen relative overflow-hidden">
+<!-- TopNavBar -->
+<header class="w-full top-0 sticky bg-[#1a1919]/70 backdrop-blur-xl border-b border-white/10 z-40 px-8 py-4 flex justify-between items-center shadow-[0_24px_48px_rgba(0,109,69,0.15)]">
+<div class="flex items-center gap-6">
+<span class="text-xl font-bold tracking-tighter text-[#96fac2] font-manrope">Deep Work OS</span>
+<div class="relative group">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[#adaaaa] text-sm">search</span>
+<input class="bg-surface-container-lowest border-none rounded-md pl-10 pr-4 py-2 text-sm text-on-surface-variant focus:ring-1 focus:ring-[#96fac2] w-64 transition-all outline-none" placeholder="Search insights..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-[#adaaaa] hover:bg-white/5 rounded-full transition-all">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-[#adaaaa] hover:bg-white/5 rounded-full transition-all">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-surface-container-high border border-white/10 overflow-hidden ml-2">
+<img alt="User profile" class="w-full h-full object-cover" data-alt="close-up portrait of a professional woman with a confident expression in a tech office environment with soft neon lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIv1aN313CqsWyjQ5t41XqKPPExqW-eyYv9Lxa4Qa0J87ylNWq9sf8tI0xCIDruo0Esjmgz_GqcDo_pnNpmsaT2zeLwoHiXl2SbyKK5CuVaFRBPr5UlgHZ4M6fDYCWSDX5hWhY4BkmJxmEZ-H8OT8Z3aUsUrl_JnrRYZyj97SZsfhLqG2cEekPy69Ziz14Dff0DwrNR-4LwWj1gI0Zpl-fV8DsdortBjPhPwVHnnORf0cNpD988JLhEg5hJgDmRkIJE_BKVHIMF2Zy"/>
+</div>
+</div>
+</header>
+<div class="p-10 space-y-10 max-w-7xl mx-auto">
+<!-- Welcome Header -->
+<section class="flex justify-between items-end">
+<div class="space-y-1">
+<p class="font-manrope uppercase tracking-widest text-[12px] font-semibold text-primary">Status: Peak Flow State</p>
+<h2 class="text-5xl font-extrabold tracking-tighter text-on-surface">Focus Dashboard</h2>
+</div>
+<div class="text-right">
+<p class="text-on-surface-variant font-medium">Session ID: 882-AFK</p>
+<p class="text-sm text-[#96fac2]">Last Synced: 2m ago</p>
+</div>
+</section>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Large Central Timer -->
+<div class="col-span-12 lg:col-span-8 glass-card p-12 rounded-xl flex flex-col items-center justify-center relative overflow-hidden group">
+<div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none"></div>
+<div class="relative z-10 text-center space-y-6">
+<div class="label-md uppercase tracking-[0.2em] text-on-surface-variant">Focusing: User Interface Design</div>
+<div class="text-[120px] font-thin tracking-tighter text-on-surface leading-none tabular-nums flex items-baseline">
+<span>25</span>
+<span class="text-primary animate-pulse">:</span>
+<span>00</span>
+</div>
+<div class="flex gap-4 items-center">
+<button class="px-10 py-4 bg-gradient-primary text-on-primary-container rounded-md font-bold transition-transform active:scale-95 flex items-center gap-2">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                START SESSION
+              </button>
+<button class="px-6 py-4 border border-white/10 hover:bg-white/5 rounded-md text-on-surface font-semibold transition-all">
+                SKIP
+              </button>
+</div>
+</div>
+<!-- Timer Background Graphic -->
+<div class="absolute -bottom-10 -right-10 w-64 h-64 border-[1px] border-primary/10 rounded-full opacity-20 group-hover:scale-110 transition-transform duration-700"></div>
+<div class="absolute -bottom-20 -right-20 w-80 h-80 border-[1px] border-primary/5 rounded-full opacity-10 group-hover:scale-125 transition-transform duration-1000"></div>
+</div>
+<!-- Intensity Selector -->
+<div class="col-span-12 lg:col-span-4 glass-card p-8 rounded-xl space-y-6">
+<h3 class="label-sm font-bold uppercase tracking-widest text-[#adaaaa]">Intensity Protocol</h3>
+<div class="space-y-3">
+<button class="w-full flex items-center justify-between p-4 bg-primary/10 border border-primary/20 rounded-md text-primary group transition-all">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined">bolt</span>
+<span class="font-bold">Deep Work</span>
+</div>
+<span class="text-[10px] font-mono">100% RAW</span>
+</button>
+<button class="w-full flex items-center justify-between p-4 border border-white/5 hover:border-white/20 rounded-md text-on-surface-variant hover:text-on-surface transition-all">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined">psychology_alt</span>
+<span class="font-bold">Flow Loop</span>
+</div>
+<span class="text-[10px] font-mono">80% POWER</span>
+</button>
+<button class="w-full flex items-center justify-between p-4 border border-white/5 hover:border-white/20 rounded-md text-on-surface-variant hover:text-on-surface transition-all">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined">eco</span>
+<span class="font-bold">Lite Focus</span>
+</div>
+<span class="text-[10px] font-mono">40% POWER</span>
+</button>
+</div>
+<div class="pt-4">
+<p class="text-xs leading-relaxed text-[#adaaaa]">High intensity blocks blocking all notifications, web-browsing, and mobile interactions for the duration of the cycle.</p>
+</div>
+</div>
+<!-- Statistics: Deep Work Today -->
+<div class="col-span-12 md:col-span-4 glass-card p-8 rounded-xl relative overflow-hidden">
+<div class="space-y-1">
+<p class="label-sm uppercase tracking-widest text-[#adaaaa]">Deep Work Today</p>
+<p class="text-4xl font-bold text-on-surface">5h 42m</p>
+</div>
+<div class="mt-6 h-1 w-full bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[75%]"></div>
+</div>
+<div class="mt-3 flex justify-between text-[10px] font-mono uppercase tracking-widest text-primary">
+<span>Daily Goal</span>
+<span>75% Achieved</span>
+</div>
+</div>
+<!-- Statistics: Quality Score -->
+<div class="col-span-12 md:col-span-4 glass-card p-8 rounded-xl relative overflow-hidden">
+<div class="space-y-1">
+<p class="label-sm uppercase tracking-widest text-[#adaaaa]">Quality Score</p>
+<p class="text-4xl font-bold text-primary-dim">94/100</p>
+</div>
+<div class="mt-6 flex gap-1">
+<div class="h-6 w-full bg-primary/20 rounded-sm"></div>
+<div class="h-6 w-full bg-primary/30 rounded-sm"></div>
+<div class="h-6 w-full bg-primary/40 rounded-sm"></div>
+<div class="h-6 w-full bg-primary/60 rounded-sm"></div>
+<div class="h-6 w-full bg-primary/80 rounded-sm"></div>
+<div class="h-6 w-full bg-primary rounded-sm"></div>
+</div>
+<p class="mt-3 text-[10px] font-mono uppercase tracking-widest text-on-surface-variant">Optimal environment detected</p>
+</div>
+<!-- Statistics: Weekly Hours -->
+<div class="col-span-12 md:col-span-4 glass-card p-8 rounded-xl relative overflow-hidden">
+<div class="space-y-1">
+<p class="label-sm uppercase tracking-widest text-[#adaaaa]">Weekly Hours</p>
+<p class="text-4xl font-bold text-on-surface">28.4 <span class="text-lg font-normal text-[#adaaaa]">hrs</span></p>
+</div>
+<div class="mt-6 flex items-end justify-between gap-1 h-12">
+<div class="bg-white/10 w-full h-[40%] rounded-sm"></div>
+<div class="bg-white/10 w-full h-[60%] rounded-sm"></div>
+<div class="bg-primary/40 w-full h-[85%] rounded-sm"></div>
+<div class="bg-primary/20 w-full h-[55%] rounded-sm"></div>
+<div class="bg-primary/60 w-full h-[70%] rounded-sm"></div>
+<div class="bg-primary w-full h-[95%] rounded-sm"></div>
+<div class="bg-white/5 w-full h-[20%] rounded-sm"></div>
+</div>
+<p class="mt-3 text-[10px] font-mono uppercase tracking-widest text-primary">+12% from last week</p>
+</div>
+</div>
+<!-- Skill Tree / Evolution Teaser (Secondary Section) -->
+<section class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+<div class="glass-card p-8 rounded-xl">
+<div class="flex justify-between items-center mb-6">
+<h3 class="label-sm font-bold uppercase tracking-widest text-on-surface">Skill Evolution</h3>
+<span class="material-symbols-outlined text-primary">trending_up</span>
+</div>
+<div class="space-y-6">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full border-2 border-primary flex items-center justify-center font-bold text-primary">07</div>
+<div class="flex-1">
+<p class="text-sm font-bold">Deep Design Systems</p>
+<div class="h-1.5 w-full bg-white/5 rounded-full mt-1">
+<div class="h-full bg-primary w-[82%]"></div>
+</div>
+</div>
+<div class="text-[10px] text-on-surface-variant">82%</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full border-2 border-white/10 flex items-center justify-center font-bold text-on-surface-variant">03</div>
+<div class="flex-1">
+<p class="text-sm font-bold text-on-surface-variant">Cognitive Endurance</p>
+<div class="h-1.5 w-full bg-white/5 rounded-full mt-1">
+<div class="h-full bg-primary/40 w-[45%]"></div>
+</div>
+</div>
+<div class="text-[10px] text-on-surface-variant">45%</div>
+</div>
+</div>
+</div>
+<div class="glass-card p-8 rounded-xl h-full flex flex-col justify-between">
+<div class="space-y-4">
+<h3 class="label-sm font-bold uppercase tracking-widest text-[#adaaaa]">Environmental Insight</h3>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-dim">verified_user</span>
+<p class="text-sm text-on-surface font-medium">Distraction Shield: <span class="text-primary">ACTIVE</span></p>
+</div>
+<p class="text-sm text-on-surface-variant leading-relaxed">System has successfully blocked 12 incoming Slack notifications and 3 mobile pickups in the last hour. Focus remains unbroken.</p>
+</div>
+<div class="mt-8 flex justify-end">
+<a class="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-2 group" href="#">
+                    View Full Security Log
+                    <span class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</a>
+</div>
+</div>
+</section>
+</div>
+<!-- Background Decor -->
+<div class="fixed -bottom-40 -left-20 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
+<div class="fixed top-20 right-0 w-[400px] h-[400px] bg-primary-container/10 rounded-full blur-[100px] pointer-events-none"></div>
+</main>
+</body></html>

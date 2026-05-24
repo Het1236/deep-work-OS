@@ -1,0 +1,470 @@
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-tertiary": "#003350",
+                        "surface-tint": "#77daa4",
+                        "on-tertiary-fixed-variant": "#004b72",
+                        "surface-bright": "#3a3939",
+                        "primary-fixed": "#93f7bf",
+                        "on-surface": "#e5e2e1",
+                        "on-error-container": "#ffdad6",
+                        "surface-container": "#201f1f",
+                        "error-container": "#93000a",
+                        "primary-fixed-dim": "#77daa4",
+                        "surface-container-low": "#1c1b1b",
+                        "on-secondary-fixed": "#002112",
+                        "error": "#ffb4ab",
+                        "on-surface-variant": "#bdcabf",
+                        "inverse-on-surface": "#313030",
+                        "secondary-container": "#1d5037",
+                        "on-background": "#e5e2e1",
+                        "on-tertiary-container": "#003856",
+                        "on-secondary-fixed-variant": "#1d5037",
+                        "on-error": "#690005",
+                        "inverse-primary": "#006c44",
+                        "on-primary": "#003821",
+                        "surface-variant": "#353534",
+                        "primary-container": "#4caf7d",
+                        "surface-container-lowest": "#0e0e0e",
+                        "background": "#0F0F0F",
+                        "surface-dim": "#131313",
+                        "tertiary-container": "#5fa3d8",
+                        "on-secondary": "#003822",
+                        "outline": "#88948a",
+                        "on-primary-container": "#003d25",
+                        "surface-container-highest": "#353534",
+                        "surface-container-high": "#2a2a2a",
+                        "secondary-fixed-dim": "#9dd2b1",
+                        "on-tertiary-fixed": "#001e31",
+                        "outline-variant": "rgba(255,255,255,0.06)",
+                        "tertiary-fixed": "#cce5ff",
+                        "tertiary-fixed-dim": "#91cdff",
+                        "secondary-fixed": "#b9efcd",
+                        "tertiary": "#91cdff",
+                        "on-primary-fixed-variant": "#005232",
+                        "on-secondary-container": "#8cc1a1",
+                        "surface": "#131313",
+                        "on-primary-fixed": "#002112",
+                        "inverse-surface": "#e5e2e1",
+                        "primary": "#4CAF7D",
+                        "secondary": "#9dd2b1",
+                        "text-primary": "#E8E8E8",
+                        "text-secondary": "#5C5C5C"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "7px",
+                        "lg": "10px",
+                        "xl": "12px",
+                        "full": "9999px"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope", "sans-serif"],
+                        "body": ["Manrope", "sans-serif"],
+                        "label": ["Manrope", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #0F0F0F;
+            color: #E8E8E8;
+            font-family: 'Manrope', sans-serif;
+        }
+        .glass-card {
+            background-color: #161616;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .material-symbols-outlined {
+            font-size: 14px;
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+    </style>
+</head><body class="antialiased">
+<!-- Updated SideNavBar with refined links and structure -->
+<aside class="fixed left-0 top-0 h-full w-[240px] bg-[#161616] border-r border-[rgba(255,255,255,0.06)] flex flex-col py-6 z-50">
+<div class="px-6 mb-8">
+<h1 class="font-mono font-bold text-[#E8E8E8] tracking-widest text-lg">Deep Work OS</h1>
+<p class="text-[10px] text-text-secondary uppercase tracking-[0.2em] mt-1 font-mono leading-tight">The Architecture of Silence</p>
+</div>
+<div class="flex-1 px-0 overflow-y-auto space-y-6">
+<!-- FOCUS Section -->
+<section>
+<h3 class="px-6 mb-2 text-[11px] font-bold text-tertiary uppercase tracking-wider">Focus</h3>
+<div class="space-y-0.5">
+<a class="flex items-center gap-3 text-[#E8E8E8] border-l-2 border-[#4CAF7D] bg-[#1C1C1C] font-semibold pl-6 py-2.5 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-manrope text-sm tracking-tight">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] hover:bg-[#222222] pl-6 py-2.5 transition-all" href="{{DATA:SCREEN:SCREEN_14}}">
+<span class="material-symbols-outlined" data-icon="leaderboard">leaderboard</span>
+<span class="font-manrope text-sm tracking-tight">Scoreboard</span>
+</a>
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] hover:bg-[#222222] pl-6 py-2.5 transition-all" href="{{DATA:SCREEN:SCREEN_50}}">
+<span class="material-symbols-outlined" data-icon="timer">timer</span>
+<span class="font-manrope text-sm tracking-tight">Focus Timer</span>
+</a>
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] hover:bg-[#222222] pl-6 py-2.5 transition-all" href="{{DATA:SCREEN:SCREEN_47}}">
+<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+<span class="font-manrope text-sm tracking-tight">Evolution</span>
+</a>
+</div>
+</section>
+<!-- SYSTEMS Section -->
+<section>
+<h3 class="px-6 mb-2 text-[11px] font-bold text-tertiary uppercase tracking-wider">Systems</h3>
+<div class="space-y-0.5">
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] hover:bg-[#222222] pl-6 py-2.5 transition-all" href="{{DATA:SCREEN:SCREEN_29}}">
+<span class="material-symbols-outlined" data-icon="check_circle">check_circle</span>
+<span class="font-manrope text-sm tracking-tight">Habit Tracker</span>
+</a>
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] hover:bg-[#222222] pl-6 py-2.5 transition-all" href="{{DATA:SCREEN:SCREEN_35}}">
+<span class="material-symbols-outlined" data-icon="assignment">assignment</span>
+<span class="font-manrope text-sm tracking-tight">Projects</span>
+</a>
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] hover:bg-[#222222] pl-6 py-2.5 transition-all" href="{{DATA:SCREEN:SCREEN_46}}">
+<span class="material-symbols-outlined" data-icon="emoji_events">emoji_events</span>
+<span class="font-manrope text-sm tracking-tight">Goals</span>
+</a>
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] hover:bg-[#222222] pl-6 py-2.5 transition-all" href="{{DATA:SCREEN:SCREEN_4}}">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+<span class="font-manrope text-sm tracking-tight">Journals</span>
+</a>
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] hover:bg-[#222222] pl-6 py-2.5 transition-all" href="{{DATA:SCREEN:SCREEN_31}}">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+<span class="font-manrope text-sm tracking-tight">Calendar</span>
+</a>
+</div>
+</section>
+<!-- INTEL Section -->
+<section>
+<h3 class="px-6 mb-2 text-[11px] font-bold text-tertiary uppercase tracking-wider">Intel</h3>
+<div class="space-y-0.5">
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] hover:bg-[#222222] pl-6 py-2.5 transition-all" href="{{DATA:SCREEN:SCREEN_27}}">
+<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+<span class="font-manrope text-sm tracking-tight">AI Reports</span>
+</a>
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] hover:bg-[#222222] pl-6 py-2.5 transition-all" href="{{DATA:SCREEN:SCREEN_20}}">
+<span class="material-symbols-outlined" data-icon="groups">groups</span>
+<span class="font-manrope text-sm tracking-tight">Group</span>
+</a>
+</div>
+</section>
+</div>
+<div class="mt-auto px-4 space-y-2 pt-4 border-t border-[rgba(255,255,255,0.06)]">
+<button class="w-full bg-[#4CAF7D] text-[#003821] text-xs font-bold py-2.5 rounded-lg hover:bg-[#77daa4] transition-colors">
+                New Deep Session
+            </button>
+<div class="space-y-0.5">
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] px-2 py-2 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-xs">Settings</span>
+</a>
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] px-2 py-2 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+<span class="text-xs">Support</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- TopNavBar -->
+<header class="fixed top-0 right-0 w-[calc(100%-240px)] h-[52px] bg-[#0F0F0F] border-b border-outline-variant flex items-center justify-between px-8 z-40">
+<div class="flex items-center gap-6">
+<span class="text-lg font-bold text-[#E8E8E8] font-mono">Focus Flow</span>
+<nav class="flex gap-4">
+<a class="text-[#4CAF7D] font-bold border-b-2 border-[#4CAF7D] font-mono text-[11px] tracking-tighter h-[52px] flex items-center" href="#">Focus</a>
+<a class="text-[#5C5C5C] font-medium hover:text-[#E8E8E8] transition-colors font-mono text-[11px] tracking-tighter h-[52px] flex items-center" href="{{DATA:SCREEN:SCREEN_29}}">Systems</a>
+<a class="text-[#5C5C5C] font-medium hover:text-[#E8E8E8] transition-colors font-mono text-[11px] tracking-tighter h-[52px] flex items-center" href="{{DATA:SCREEN:SCREEN_27}}">Intelligence</a>
+<a class="text-[#5C5C5C] font-medium hover:text-[#E8E8E8] transition-colors font-mono text-[11px] tracking-tighter h-[52px] flex items-center" href="#">Life Areas</a>
+</nav>
+</div>
+<div class="flex items-center gap-5">
+<div class="flex items-center gap-2 bg-[#1C1C1C] px-3 py-1 rounded-full border border-outline-variant">
+<span class="text-[10px] font-mono text-text-secondary">XP Progress</span>
+<div class="w-16 h-1 bg-[#2A2A2A] rounded-full overflow-hidden">
+<div class="w-3/4 h-full bg-primary"></div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-text-secondary hover:text-text-primary cursor-pointer transition-colors" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined text-text-secondary hover:text-text-primary cursor-pointer transition-colors" data-icon="settings">settings</span>
+<div class="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant flex items-center justify-center overflow-hidden">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="minimalist avatar profile picture of a person with clean digital art style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAAIWJnJJRWLUbP86KnRdtUt_ihYnHV0mEG4AKUu7NmeDCJcHOpIcgjFJq8vG1p0Bz1hgvBp7qWYv4NvmeKCm3ke3ijOC23-dZ09RuG1jS52CIXOnifrWa-a5Qgyqh5ntaErcrlRLdAsfsHw8eM__QEkWZolegCCzHtJbuvfb9VWU9ULq-1OHUSg3Go4sPCJvL1FSr0y6zSfaEia9BI1lEjFzXwxjIV2mf8bPgv1PmSp9e_5iTChc_9zVS6o9zbusSbAznTW5mgGn6O"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-[240px] mt-[52px] p-6 space-y-6">
+<!-- Row 1: Stat Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="glass-card p-6 rounded-lg flex flex-col justify-between">
+<div>
+<h3 class="text-[11px] text-text-secondary uppercase tracking-widest mb-4">Deep Work Today</h3>
+<div class="flex items-baseline gap-3">
+<span class="text-4xl mono font-medium text-text-primary">3.5h</span>
+<div class="flex items-center text-primary text-xs mono">
+<span class="material-symbols-outlined text-[12px] mr-0.5" data-icon="trending_up">trending_up</span>
+                            +1.4h
+                        </div>
+</div>
+</div>
+</div>
+<div class="glass-card p-6 rounded-lg flex flex-col justify-between">
+<div>
+<h3 class="text-[11px] text-text-secondary uppercase tracking-widest mb-4">Quality Score</h3>
+<div class="flex items-baseline gap-3">
+<span class="text-4xl mono font-medium text-text-primary">7.2</span>
+<span class="text-[10px] text-text-secondary font-mono tracking-tighter">f(focus + intensity)/output</span>
+</div>
+</div>
+</div>
+<div class="glass-card p-6 rounded-lg flex flex-col justify-between">
+<div>
+<h3 class="text-[11px] text-text-secondary uppercase tracking-widest mb-4">Weekly Hours</h3>
+<div class="flex flex-col gap-3">
+<span class="text-4xl mono font-medium text-text-primary">22.4h</span>
+<div class="w-full h-1.5 bg-[#1C1C1C] rounded-full overflow-hidden">
+<div class="w-[64%] h-full bg-primary"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Row 2: 2:1 Split -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Left Column (2fr) -->
+<div class="lg:col-span-2 space-y-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Timer Card -->
+<div class="glass-card p-6 rounded-lg">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-[11px] text-text-secondary uppercase tracking-widest">Active Engine</h3>
+<div class="flex gap-1">
+<div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-[#2A2A2A]"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-[#2A2A2A]"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-[#2A2A2A]"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-[#2A2A2A]"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-[#2A2A2A]"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-[#2A2A2A]"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-[#2A2A2A]"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-[#2A2A2A]"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-[#2A2A2A]"></div>
+</div>
+</div>
+<div class="flex flex-col items-center mb-8">
+<div class="text-[44px] mono font-light tracking-tighter text-text-primary">00:00:00</div>
+<span class="text-[10px] text-text-secondary font-mono mt-1">Sess. ID: #DW-8921</span>
+</div>
+<div class="flex gap-3">
+<button class="flex-1 bg-primary text-on-primary font-bold py-2.5 rounded-[7px] text-xs transition-transform active:scale-95">START SESSION</button>
+<button class="flex-1 bg-transparent border border-outline-variant text-text-primary py-2.5 rounded-[7px] text-xs hover:bg-[#222222] transition-colors">LOG BREAK</button>
+</div>
+</div>
+<!-- Weekly Bar Chart -->
+<div class="glass-card p-6 rounded-lg">
+<h3 class="text-[11px] text-text-secondary uppercase tracking-widest mb-8">Intensity Distribution</h3>
+<div class="flex items-end justify-between h-32 gap-2">
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-primary/20 rounded-t-sm h-[40%]"></div>
+<span class="text-[9px] mono text-text-secondary">M</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-primary/20 rounded-t-sm h-[70%]"></div>
+<span class="text-[9px] mono text-text-secondary">T</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-primary/20 rounded-t-sm h-[55%]"></div>
+<span class="text-[9px] mono text-text-secondary">W</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-primary/20 rounded-t-sm h-[85%]"></div>
+<span class="text-[9px] mono text-text-secondary">T</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-primary rounded-t-sm h-[30%]"></div>
+<span class="text-[9px] mono text-primary font-bold">F</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-[#2A2A2A] rounded-t-sm h-[10%]"></div>
+<span class="text-[9px] mono text-text-secondary">S</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-[#2A2A2A] rounded-t-sm h-[5%]"></div>
+<span class="text-[9px] mono text-text-secondary">S</span>
+</div>
+</div>
+</div>
+</div>
+<!-- WIGs/Goals Card -->
+<div class="glass-card p-6 rounded-lg">
+<h3 class="text-[11px] text-text-secondary uppercase tracking-widest mb-6">Wildly Important Goals</h3>
+<div class="space-y-6">
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-center">
+<span class="text-sm font-semibold">Scale Architecture Platform</span>
+<span class="text-[10px] px-2 py-0.5 bg-primary/10 text-primary border border-primary/20 rounded-full">Integrated</span>
+</div>
+<div class="w-full h-1 bg-[#1C1C1C] rounded-full overflow-hidden">
+<div class="w-[82%] h-full bg-primary"></div>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-center">
+<span class="text-sm font-semibold">Deep Work OS Documentation</span>
+<span class="text-[10px] px-2 py-0.5 bg-tertiary/10 text-tertiary border border-tertiary/20 rounded-full">Developing</span>
+</div>
+<div class="w-full h-1 bg-[#1C1C1C] rounded-full overflow-hidden">
+<div class="w-[45%] h-full bg-tertiary"></div>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-center">
+<span class="text-sm font-semibold">Physical Hardware R&amp;D</span>
+<span class="text-[10px] px-2 py-0.5 bg-[#3E4942] text-text-secondary border border-outline-variant rounded-full">Aspirational</span>
+</div>
+<div class="w-full h-1 bg-[#1C1C1C] rounded-full overflow-hidden">
+<div class="w-[12%] h-full bg-text-secondary"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column (1fr) -->
+<div class="space-y-6">
+<!-- Habit Loops -->
+<div class="glass-card p-6 rounded-lg">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-[11px] text-text-secondary uppercase tracking-widest">Habit Loops</h3>
+<span class="material-symbols-outlined text-text-secondary cursor-pointer" data-icon="more_horiz">more_horiz</span>
+</div>
+<div class="space-y-4">
+<div class="flex items-center justify-between group">
+<div class="flex items-center gap-3">
+<div class="w-5 h-5 rounded border border-primary bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[14px]" data-icon="check" style="font-variation-settings: 'wght' 700;">check</span>
+</div>
+<span class="text-sm text-text-primary">Morning Reading</span>
+</div>
+<span class="text-[10px] mono text-text-secondary">14d</span>
+</div>
+<div class="flex items-center justify-between group">
+<div class="flex items-center gap-3">
+<div class="w-5 h-5 rounded border border-primary bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[14px]" data-icon="check" style="font-variation-settings: 'wght' 700;">check</span>
+</div>
+<span class="text-sm text-text-primary">15m Meditation</span>
+</div>
+<span class="text-[10px] mono text-text-secondary">8d</span>
+</div>
+<div class="flex items-center justify-between group">
+<div class="flex items-center gap-3">
+<div class="w-5 h-5 rounded border border-outline-variant bg-[#1C1C1C]"></div>
+<span class="text-sm text-text-primary">Systems Code</span>
+</div>
+<span class="text-[10px] mono text-text-secondary">21d</span>
+</div>
+<div class="flex items-center justify-between group">
+<div class="flex items-center gap-3">
+<div class="w-5 h-5 rounded border border-outline-variant bg-[#1C1C1C]"></div>
+<span class="text-sm text-text-primary">Zero Inbox</span>
+</div>
+<span class="text-[10px] mono text-text-secondary">3d</span>
+</div>
+<div class="flex items-center justify-between group">
+<div class="flex items-center gap-3">
+<div class="w-5 h-5 rounded border border-outline-variant bg-[#1C1C1C]"></div>
+<span class="text-sm text-text-primary">Hydration Target</span>
+</div>
+<span class="text-[10px] mono text-text-secondary">1d</span>
+</div>
+<div class="flex items-center justify-between group">
+<div class="flex items-center gap-3">
+<div class="w-5 h-5 rounded border border-outline-variant bg-[#1C1C1C]"></div>
+<span class="text-sm text-text-primary">Reflection Journal</span>
+</div>
+<span class="text-[10px] mono text-text-secondary">42d</span>
+</div>
+</div>
+</div>
+<!-- Fleet Performance -->
+<div class="glass-card p-6 rounded-lg">
+<h3 class="text-[11px] text-text-secondary uppercase tracking-widest mb-6">Fleet Performance</h3>
+<div class="space-y-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center overflow-hidden">
+<img alt="user" class="w-full h-full" data-alt="minimalist digital avatar for user alice" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAq9GwKwsU8JSoWdkMRJgGY8NlRV0PLtD0suWIjcEa0Gazqk2R6Xl5CwRDZ1eYxP0RzLScP-f4WfiXN8XMtzauDIUNxy8-RyEN2mhcZotNOVr6st4E1gquSWA7GLDKYNfflOxOrNlVTQ3iLrrX9FuXXrqvCL_R2Evo0Bqj2M-W-YhJidesPPE_mS8MYI2izLgl6snGsjfJCX-g6M394A1IHM7n5v5h9OCEMaES_dYu3COKcRUzVwXu0qU7zXmgNvsw3LwNlCaehvJZB"/>
+</div>
+<div class="flex-1">
+<div class="flex justify-between mb-1">
+<span class="text-[11px] font-semibold text-text-primary">A. Sterling</span>
+<span class="text-[10px] mono text-text-secondary">92%</span>
+</div>
+<div class="w-full h-1 bg-[#1C1C1C] rounded-full overflow-hidden">
+<div class="w-[92%] h-full bg-[#4A90C4]"></div>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded border border-primary/40 bg-primary/10 flex items-center justify-center overflow-hidden">
+<img alt="user" class="w-full h-full" data-alt="minimalist digital avatar for user felix" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAjJ5Nfqt7BO8qeXYRerjjQEJsZJLdSRx_7wgl8A8ZdqyxrlphE8ebRfxFiYb9wPnhHnAr-3UMljpAryjsKqZwTMHnocNqzj7FXQpnQ5RuQVHqVLb8v6ZO0AnLNpCi_VoxYHsGC5r7irkrcZ3Xa3M-zTmHA_AOhdXs31BwL00mMTXP7SwsUDNFGWa2oOMi9xWZwPy4cV_xYmAHzTxPbpOssTWvi1-TJ75v5sUyExedtCk7TclW0sri4tZhOh1hNU6ofSQEz1mnNgjgh"/>
+</div>
+<div class="flex-1">
+<div class="flex justify-between mb-1">
+<span class="text-[11px] font-bold text-primary">You</span>
+<span class="text-[10px] mono text-primary">78%</span>
+</div>
+<div class="w-full h-1 bg-[#1C1C1C] rounded-full overflow-hidden">
+<div class="w-[78%] h-full bg-primary"></div>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center overflow-hidden">
+<img alt="user" class="w-full h-full" data-alt="minimalist digital avatar for user marcus" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCzlZOTWPn4s8Q-8JZzysOQaxJoJz1FGVVs-jgJfjovAIU2FaZFF6N0uYGMy4QU0WTQngrOVd7rPQ9ph04qwqm2m9ECGQOSkLKuLop2IRGXM1gfQHzEsDY7WFL-BPFAbPPQMEel3XSjGcElMw3KUi4jXCnvFVX1zVlTUdxm8Ukk5k1mpkiTYIayNtrJftXbdaCX5wlXf67Q0Hq_X33zmMK43xAmkYMuHgIXR3Vsmo2fA3O-Q3mRgn-qBjbDMD0cd5Q2iSXg_ryBnqsp"/>
+</div>
+<div class="flex-1">
+<div class="flex justify-between mb-1">
+<span class="text-[11px] font-semibold text-text-primary">M. Kovaic</span>
+<span class="text-[10px] mono text-text-secondary">64%</span>
+</div>
+<div class="w-full h-1 bg-[#1C1C1C] rounded-full overflow-hidden">
+<div class="w-[64%] h-full bg-secondary"></div>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center overflow-hidden">
+<img alt="user" class="w-full h-full" data-alt="minimalist digital avatar for user sarah" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBr773YHB8oJ8E1-kUaRF1FF65X7lNjg7MVi99ERsdEr3rjAdelQQIQHnO0FmXptMQ0UUTVP4U23pG1aajkqs6sBWShhkwvXMaUhMQN0BrXD9Y-9lq9ISJLd3lknAwU8m0Dsakgs-rgsM24xuxiSPQjlPhDO1LFXIeo5nJhKXwBuUnftlHkG2TFTbfvwPqyAiSUkIjebE91pm6VXMY-4ANKaWwgIKzacJOr1bzSsWx1kt1oMMBwHGRyQUcyoOYw2CjnCTEI5NmuNznS"/>
+</div>
+<div class="flex-1">
+<div class="flex justify-between mb-1">
+<span class="text-[11px] font-semibold text-text-primary">S. Chen</span>
+<span class="text-[10px] mono text-text-secondary">51%</span>
+</div>
+<div class="w-full h-1 bg-[#1C1C1C] rounded-full overflow-hidden">
+<div class="w-[51%] h-full bg-secondary"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

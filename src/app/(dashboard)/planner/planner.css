@@ -1,0 +1,289 @@
+/* ═══════════════════════════════════════════════
+   Planner Page Styles — Glassmorphism Cards
+   ═══════════════════════════════════════════════ */
+
+.pl { display: flex; flex-direction: column; gap: var(--space-xl); }
+
+/* ─── Header ─── */
+.pl-hdr {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  flex-wrap: wrap; gap: var(--space-lg);
+}
+.pl-lbl {
+  font-size: 0.6875rem; font-weight: 700; color: var(--accent);
+  letter-spacing: 0.12em; margin-bottom: 6px;
+  font-family: var(--font-mono, monospace);
+}
+.pl-ttl {
+  font-size: 2.5rem; font-weight: 800; color: var(--text-primary);
+  letter-spacing: -0.03em; line-height: 1.05;
+  font-family: var(--font-display, var(--font-sans));
+}
+.pl-nav { display: flex; align-items: center; gap: 8px; }
+.nav-btn {
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm); padding: 8px; cursor: pointer;
+  color: var(--text-secondary); transition: all 0.15s;
+}
+.nav-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+.nav-center {
+  display: flex; flex-direction: column; align-items: center;
+  min-width: 180px; gap: 2px;
+}
+.nav-date { font-size: 0.9375rem; font-weight: 600; color: var(--text-primary); }
+.nav-badge {
+  font-size: 0.5625rem; letter-spacing: 0.1em; color: var(--accent);
+  background: rgba(76,175,125,0.12); padding: 2px 8px; border-radius: 3px;
+  font-family: var(--font-mono, monospace);
+}
+.nav-today {
+  font-size: 0.6875rem; font-weight: 600; color: var(--accent);
+  background: none; border: 1px solid rgba(76,175,125,0.3);
+  border-radius: var(--radius-sm); padding: 6px 12px; cursor: pointer;
+  transition: all 0.15s; letter-spacing: 0.06em;
+  font-family: var(--font-mono, monospace);
+}
+.nav-today:hover { background: rgba(76,175,125,0.12); }
+
+/* ─── Stats ─── */
+.pl-stats {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-md);
+}
+.st {
+  background: rgba(20,20,20,0.6); backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-default); border-radius: var(--radius-lg);
+  padding: var(--space-lg); display: flex; flex-direction: column;
+  align-items: center; gap: 4px;
+}
+.st-v {
+  font-size: 1.25rem; font-weight: 700; color: var(--text-primary);
+  font-family: var(--font-mono, monospace);
+}
+.st-l {
+  font-size: 0.5625rem; letter-spacing: 0.1em; color: var(--text-tertiary);
+  font-family: var(--font-mono, monospace);
+}
+
+/* ─── Cards Container ─── */
+.pl-cards {
+  display: flex; flex-direction: column; gap: 8px;
+  max-width: 800px;
+}
+
+/* ═══════════════════════════════════════════════
+   SLOT CARD — the core 30-min block card
+   ═══════════════════════════════════════════════ */
+.slot-card {
+  background: rgba(20, 20, 20, 0.55);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 16px 20px;
+  transition: all 0.25s ease;
+  position: relative;
+  cursor: default;
+}
+.slot-card:hover {
+  border-color: rgba(255,255,255,0.12);
+  background: rgba(28, 28, 28, 0.7);
+}
+
+/* Filled (occupied) card */
+.slot-card.filled {
+  border-left: 3px solid var(--bc, var(--accent));
+  background: rgba(22, 22, 22, 0.7);
+}
+.slot-card.filled:hover {
+  box-shadow: 0 4px 24px rgba(0,0,0,0.35);
+  background: rgba(30, 30, 30, 0.8);
+}
+
+/* Current time highlight */
+.slot-card.now,
+.slot-card.now-empty {
+  box-shadow: 0 0 20px rgba(76,175,125,0.12);
+  border-color: rgba(76,175,125,0.4);
+}
+
+/* ─── Header inside card ─── */
+.slot-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 10px;
+}
+.slot-range {
+  font-size: 0.75rem; color: var(--text-secondary);
+  letter-spacing: 0.04em; font-weight: 600;
+  font-family: var(--font-mono, monospace);
+}
+.slot-dur {
+  font-size: 0.625rem; color: var(--text-tertiary);
+  background: rgba(255,255,255,0.06);
+  padding: 2px 8px; border-radius: 3px;
+  font-family: var(--font-mono, monospace);
+}
+.slot-card.now .slot-range,
+.slot-card.now-empty .slot-range { color: var(--accent); }
+
+/* Delete button */
+.slot-del {
+  position: absolute; top: 12px; right: 12px;
+  background: none; border: none; color: var(--text-tertiary);
+  cursor: pointer; opacity: 0; transition: all 0.15s; padding: 4px;
+}
+.slot-card.filled:hover .slot-del { opacity: 1; }
+.slot-del:hover { color: #f44336; }
+
+/* ─── Block body (filled card, view mode) ─── */
+.slot-body { cursor: pointer; }
+.slot-title {
+  font-size: 0.9rem; font-weight: 600; color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.slot-tags {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  font-size: 0.6875rem; color: var(--text-tertiary);
+}
+.slot-tag { display: inline-flex; align-items: center; gap: 4px; }
+
+/* ═══════════════════════════════════════════════
+   ADD BLOCK BUTTON — inside empty card
+   ═══════════════════════════════════════════════ */
+.slot-add {
+  display: flex; align-items: center; gap: 8px;
+  color: var(--text-tertiary); cursor: pointer;
+  font-size: 0.8125rem; transition: all 0.2s ease;
+  padding: 6px 0;
+  border-radius: 8px;
+}
+.slot-add:hover {
+  color: var(--accent);
+}
+.slot-add span { font-weight: 500; }
+
+/* ═══════════════════════════════════════════════
+   MERGE ZONE — between adjacent filled blocks
+   ═══════════════════════════════════════════════ */
+.merge-zone {
+  height: 24px; display: flex; align-items: center;
+  cursor: pointer; padding: 0 20px; margin: -4px 0;
+  position: relative; z-index: 5;
+}
+.merge-line {
+  width: 100%; height: 2px; background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; border-radius: 1px; transition: all 0.2s;
+}
+.merge-zone:hover .merge-line,
+.merge-line.vis {
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(76,175,125,0.35);
+}
+.merge-btn {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: rgba(14,14,14,0.95);
+  border: 1.5px solid rgba(255,255,255,0.1);
+  color: var(--text-tertiary);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: all 0.2s; position: absolute;
+}
+.merge-zone:hover .merge-btn {
+  opacity: 1; border-color: var(--accent); color: var(--accent);
+  background: rgba(76,175,125,0.15);
+}
+
+/* ═══════════════════════════════════════════════
+   FORM — create & edit (inside card)
+   ═══════════════════════════════════════════════ */
+.slot-form {
+  display: flex; flex-direction: column; gap: 10px;
+}
+.sf-input {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px; padding: 10px 14px;
+  color: var(--text-primary); font-size: 0.8125rem;
+  font-family: var(--font-sans); outline: none;
+  transition: border-color 0.15s;
+  width: 100%; box-sizing: border-box;
+}
+.sf-input:focus { border-color: var(--accent); }
+.sf-input::placeholder { color: var(--text-tertiary); }
+
+.sf-sel {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px; padding: 9px 12px;
+  color: var(--text-primary); font-size: 0.75rem;
+  font-family: var(--font-sans); outline: none;
+  cursor: pointer; width: 100%; box-sizing: border-box;
+}
+.sf-sel option { background: #1a1a1a; color: #e0e0e0; }
+
+/* Type chips */
+.sf-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sf-chip {
+  font-size: 0.625rem; font-weight: 600; letter-spacing: 0.04em;
+  padding: 6px 14px; border-radius: 6px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-tertiary); cursor: pointer;
+  transition: all 0.15s; font-family: var(--font-sans);
+}
+.sf-chip:hover { border-color: var(--cc); color: var(--cc); }
+.sf-chip.on {
+  background: rgba(76,175,125,0.1);
+  border-color: var(--cc); color: var(--cc);
+}
+
+/* Duration row */
+.sf-dur-row { display: flex; align-items: center; gap: 10px; }
+.sf-dur-label {
+  font-size: 0.5625rem; letter-spacing: 0.1em; color: var(--text-tertiary);
+  font-family: var(--font-mono, monospace);
+}
+
+/* Buttons */
+.sf-btns { display: flex; gap: 8px; margin-top: 4px; }
+.sf-save {
+  flex: 1; padding: 10px;
+  background: var(--primary-gradient, linear-gradient(135deg, #4CAF7D, #2E7D5B));
+  color: #0e0e0e; border: none; border-radius: 8px;
+  font-size: 0.75rem; font-weight: 700; cursor: pointer;
+  letter-spacing: 0.06em; font-family: var(--font-sans);
+  transition: all 0.15s;
+}
+.sf-save:hover {
+  filter: brightness(1.12);
+  box-shadow: 0 0 16px rgba(76,175,125,0.25);
+}
+.sf-cancel {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 10px 14px; background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: var(--text-secondary); font-size: 0.75rem; cursor: pointer;
+  font-family: var(--font-sans); transition: all 0.15s;
+}
+.sf-cancel:hover {
+  border-color: rgba(255,255,255,0.2);
+  color: var(--text-primary);
+}
+
+/* ─── Loading ─── */
+.pl-load {
+  display: flex; align-items: center; justify-content: center;
+  height: 60vh; color: var(--text-tertiary);
+}
+.pl-spin { animation: pl-rotate 1s linear infinite; }
+@keyframes pl-rotate { to { transform: rotate(360deg); } }
+
+/* ─── Responsive ─── */
+@media (max-width: 900px) {
+  .pl-stats { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .pl-ttl { font-size: 1.75rem; }
+}

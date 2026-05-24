@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Deep Work OS - Scoreboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&amp;family=Geist+Mono:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "secondary-fixed-dim": "#9dd2b1",
+                        "primary-fixed": "#93f7bf",
+                        "on-tertiary-fixed": "#001e31",
+                        "on-tertiary-container": "#003856",
+                        "on-primary-fixed-variant": "#005232",
+                        "secondary-fixed": "#b9efcd",
+                        "on-secondary-container": "#8cc1a1",
+                        "outline": "#88948a",
+                        "error": "#ffb4ab",
+                        "primary-fixed-dim": "#77daa4",
+                        "on-secondary": "#003822",
+                        "on-background": "#e5e2e1",
+                        "on-tertiary-fixed-variant": "#004b72",
+                        "error-container": "#93000a",
+                        "surface-bright": "#3a3939",
+                        "surface-container-high": "#2a2a2a",
+                        "surface-dim": "#131313",
+                        "inverse-surface": "#e5e2e1",
+                        "on-error-container": "#ffdad6",
+                        "outline-variant": "rgba(255,255,255,0.06)",
+                        "secondary-container": "#1d5037",
+                        "on-secondary-fixed-variant": "#1d5037",
+                        "on-primary-fixed": "#002112",
+                        "on-primary-container": "#003d25",
+                        "primary-container": "#4caf7d",
+                        "surface-tint": "#77daa4",
+                        "background": "#0F0F0F",
+                        "tertiary": "#91cdff",
+                        "on-error": "#690005",
+                        "surface-container": "#201f1f",
+                        "inverse-on-surface": "#313030",
+                        "secondary": "#9dd2b1",
+                        "tertiary-fixed": "#cce5ff",
+                        "surface": "#131313",
+                        "on-primary": "#003821",
+                        "primary": "#4CAF7D",
+                        "on-secondary-fixed": "#002112",
+                        "inverse-primary": "#006c44",
+                        "on-tertiary": "#003350",
+                        "surface-container-low": "#1c1b1b",
+                        "on-surface-variant": "#bdcabf",
+                        "surface-container-lowest": "#0e0e0e",
+                        "surface-container-highest": "#353534",
+                        "tertiary-container": "#5fa3d8",
+                        "surface-variant": "#353534",
+                        "on-surface": "#e5e2e1",
+                        "tertiary-fixed-dim": "#91cdff",
+                        "text-primary": "#E8E8E8",
+                        "text-secondary": "#5C5C5C"
+                    },
+                    fontFamily: {
+                        headline: ["Manrope", "sans-serif"],
+                        body: ["Manrope", "sans-serif"],
+                        label: ["Manrope", "sans-serif"],
+                        mono: ["JetBrains Mono", "monospace"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "7px",
+                        "lg": "10px",
+                        "xl": "12px",
+                        "full": "9999px"
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-size: 14px;
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        body { background-color: #0F0F0F; color: #E8E8E8; font-family: 'Manrope', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+    </style>
+</head>
+<body class="antialiased">
+<!-- Updated SideNavBar -->
+<aside class="fixed left-0 top-0 h-full w-[240px] bg-[#161616] border-r border-[rgba(255,255,255,0.06)] flex flex-col py-6 z-50">
+<div class="px-6 mb-8">
+<h1 class="font-mono font-bold text-[#E8E8E8] tracking-widest text-lg">Deep Work OS</h1>
+<p class="text-[10px] text-[#5C5C5C] uppercase tracking-[0.2em] mt-1 font-mono leading-tight">The Architecture of Silence</p>
+</div>
+<div class="flex-1 px-0 overflow-y-auto space-y-6">
+<!-- FOCUS Section -->
+<section>
+<h3 class="px-6 mb-2 text-[11px] font-bold text-[#91cdff] uppercase tracking-wider">Focus</h3>
+<div class="space-y-0.5">
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] hover:bg-[#222222] pl-6 py-2.5 transition-all" href="{{DATA:SCREEN:SCREEN_50}}">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-manrope text-sm tracking-tight">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 text-[#E8E8E8] border-l-2 border-[#4CAF7D] bg-[#1C1C1C] font-semibold pl-6 py-2.5 transition-all" href="{{DATA:SCREEN:SCREEN_23}}">
+<span class="material-symbols-outlined" data-icon="leaderboard" style="font-variation-settings: 'FILL' 1;">leaderboard</span>
+<span class="font-manrope text-sm tracking-tight">Scoreboard</span>
+</a>
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] hover:bg-[#222222] pl-6 py-2.5 transition-all" href="{{DATA:SCREEN:SCREEN_6}}">
+<span class="material-symbols-outlined" data-icon="timer">timer</span>
+<span class="font-manrope text-sm tracking-tight">Timer</span>
+</a>
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] hover:bg-[#222222] pl-6 py-2.5 transition-all" href="{{DATA:SCREEN:SCREEN_47}}">
+<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+<span class="font-manrope text-sm tracking-tight">Evolution</span>
+</a>
+</div>
+</section>
+<!-- SYSTEMS Section -->
+<section>
+<h3 class="px-6 mb-2 text-[11px] font-bold text-[#91cdff] uppercase tracking-wider">Systems</h3>
+<div class="space-y-0.5">
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] hover:bg-[#222222] pl-6 py-2.5 transition-all" href="{{DATA:SCREEN:SCREEN_28}}">
+<span class="material-symbols-outlined" data-icon="check_circle">check_circle</span>
+<span class="font-manrope text-sm tracking-tight">Habit Tracker</span>
+</a>
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] hover:bg-[#222222] pl-6 py-2.5 transition-all" href="{{DATA:SCREEN:SCREEN_35}}">
+<span class="material-symbols-outlined" data-icon="assignment">assignment</span>
+<span class="font-manrope text-sm tracking-tight">Projects</span>
+</a>
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] hover:bg-[#222222] pl-6 py-2.5 transition-all" href="{{DATA:SCREEN:SCREEN_12}}">
+<span class="material-symbols-outlined" data-icon="emoji_events">emoji_events</span>
+<span class="font-manrope text-sm tracking-tight">Goals</span>
+</a>
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] hover:bg-[#222222] pl-6 py-2.5 transition-all" href="{{DATA:SCREEN:SCREEN_27}}">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+<span class="font-manrope text-sm tracking-tight">Journals</span>
+</a>
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] hover:bg-[#222222] pl-6 py-2.5 transition-all" href="{{DATA:SCREEN:SCREEN_2}}">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+<span class="font-manrope text-sm tracking-tight">Calendar</span>
+</a>
+</div>
+</section>
+<!-- INTEL Section -->
+<section>
+<h3 class="px-6 mb-2 text-[11px] font-bold text-[#91cdff] uppercase tracking-wider">Intel</h3>
+<div class="space-y-0.5">
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] hover:bg-[#222222] pl-6 py-2.5 transition-all" href="{{DATA:SCREEN:SCREEN_30}}">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-manrope text-sm tracking-tight">AI Reports</span>
+</a>
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] hover:bg-[#222222] pl-6 py-2.5 transition-all" href="{{DATA:SCREEN:SCREEN_18}}">
+<span class="material-symbols-outlined" data-icon="groups">groups</span>
+<span class="font-manrope text-sm tracking-tight">Group</span>
+</a>
+</div>
+</section>
+</div>
+<div class="mt-auto px-4 space-y-2 pt-4 border-t border-[rgba(255,255,255,0.06)]">
+<button class="w-full bg-[#4CAF7D] text-[#003821] text-xs font-bold py-2.5 rounded-lg hover:bg-[#77daa4] transition-colors">
+                New Deep Session
+            </button>
+<div class="space-y-0.5">
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] px-2 py-2 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-xs">Settings</span>
+</a>
+<a class="flex items-center gap-3 text-[#5C5C5C] hover:text-[#E8E8E8] px-2 py-2 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+<span class="text-xs">Support</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- TopNavBar -->
+<header class="h-[52px] fixed top-0 right-0 left-[240px] z-40 bg-[#0F0F0F] flex justify-between items-center px-8 font-manrope text-sm">
+<div class="flex items-center flex-1 max-w-md">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#5C5C5C] text-[18px]">search</span>
+<input class="w-full bg-[#161616] border-none rounded-full py-1.5 pl-10 pr-4 text-xs focus:ring-1 focus:ring-[#2A5C42] transition-all text-[#E8E8E8] placeholder-[#5C5C5C]" placeholder="Search logs..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4 text-[#5C5C5C]">
+<button class="hover:text-[#E8E8E8] transition-colors"><span class="material-symbols-outlined">notifications</span></button>
+<button class="hover:text-[#E8E8E8] transition-colors"><span class="material-symbols-outlined">bolt</span></button>
+</div>
+<button class="text-[#4CAF7D] font-bold px-4 py-1.5 hover:text-[#E8E8E8] transition-colors">Quick Task</button>
+<div class="h-8 w-8 rounded-full overflow-hidden border border-outline-variant/20">
+<img alt="User Profile" class="h-full w-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBWDphEu1r1g18eHCET4V1Fy6BXFV5v0PPnnI-T2GjqUNKYtXXFJPsrsodDI4yqBFYD4ktFK5VYikKPSgYIANzmwwIn6nue9BTj5ZqDuCGWa1CiShu7NaZCd2_2gG97kR-t_ZR2xyabeguiOSVzVcgDP3pen8ff9Gf3z0wvgkpCa6ItDFKK1CxhoKRhpjGEX0f__BRsbAXmfHyXvzpe1URFOcrV6xcpSsFh_CLFAvU-Wny31LNP5mKDH9x9xYaK6fJ_iuDhDJ-hm87h"/>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="ml-[240px] pt-[52px] p-8 min-h-screen">
+<div class="max-w-6xl mx-auto space-y-8">
+<!-- Comparison Strip -->
+<section class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="bg-[#161616] p-6 rounded-[10px] flex items-center justify-between group border border-outline-variant/10">
+<div>
+<p class="text-[10px] font-mono uppercase tracking-widest text-[#5C5C5C] mb-1">WEEK 1 BASELINE</p>
+<h2 class="text-2xl font-mono font-medium text-[#5C5C5C]">1.9<span class="text-sm">h/day avg</span></h2>
+</div>
+<span class="material-symbols-outlined text-[#5C5C5C] opacity-20 group-hover:opacity-100 transition-opacity">history</span>
+</div>
+<div class="bg-[#1C1C1C] p-6 rounded-[10px] border border-[#4CAF7D]/10 flex items-center justify-between group">
+<div>
+<p class="text-[10px] font-mono uppercase tracking-widest text-[#4CAF7D] mb-1">CURRENT WEEK</p>
+<h2 class="text-2xl font-mono font-bold text-[#77DAA4]">4.8<span class="text-sm">h/day avg</span></h2>
+</div>
+<div class="flex flex-col items-end">
+<span class="text-[#4CAF7D] text-xs font-bold">+152%</span>
+<span class="material-symbols-outlined text-[#4CAF7D] animate-pulse">trending_up</span>
+</div>
+</div>
+</section>
+<!-- Main Grid Layout -->
+<div class="grid grid-cols-12 gap-8">
+<!-- Center Column: Bar Chart & Leaderboard -->
+<div class="col-span-12 lg:col-span-8 space-y-8">
+<!-- Weekly Bar Chart Card -->
+<div class="bg-[#161616] rounded-[10px] p-8 border border-outline-variant/10">
+<div class="flex justify-between items-end mb-10">
+<div>
+<h3 class="text-lg font-medium text-[#E8E8E8] mb-1">Weekly Performance</h3>
+<p class="text-[#5C5C5C] text-sm">Deep Work distribution across current cycle</p>
+</div>
+<div class="text-right">
+<p class="text-3xl font-mono font-black text-[#E8E8E8]">28.4<span class="text-lg font-normal text-[#5C5C5C]">h</span></p>
+<p class="text-[10px] font-mono uppercase tracking-widest text-[#5C5C5C]">Total This Week</p>
+</div>
+</div>
+<div class="flex items-end justify-between h-48 gap-4 px-2">
+<div class="flex-1 flex flex-col items-center gap-3">
+<div class="w-full bg-[#1C1C1C] rounded-t-sm relative h-full flex items-end">
+<div class="w-full bg-[#2A5C42] h-[45%] rounded-t-sm"></div>
+</div>
+<span class="text-[10px] font-mono text-[#5C5C5C]">MON</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-3">
+<div class="w-full bg-[#1C1C1C] rounded-t-sm relative h-full flex items-end">
+<div class="w-full bg-[#2A5C42] h-[60%] rounded-t-sm"></div>
+</div>
+<span class="text-[10px] font-mono text-[#5C5C5C]">TUE</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-3">
+<div class="w-full bg-[#1C1C1C] rounded-t-sm relative h-full flex items-end">
+<div class="w-full bg-[#2A5C42] h-[35%] rounded-t-sm"></div>
+</div>
+<span class="text-[10px] font-mono text-[#5C5C5C]">WED</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-3">
+<div class="w-full bg-[#1C1C1C] rounded-t-sm relative h-full flex items-end">
+<div class="w-full bg-[#4CAF7D] h-[85%] rounded-t-sm shadow-[0_0_15px_rgba(76,175,125,0.2)]"></div>
+</div>
+<span class="text-[10px] font-mono text-[#E8E8E8] font-bold">THU</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-3">
+<div class="w-full bg-[#1C1C1C] rounded-t-sm relative h-full flex items-end">
+<div class="w-full bg-[#1C1C1C] h-0 rounded-t-sm"></div>
+</div>
+<span class="text-[10px] font-mono text-[#5C5C5C]">FRI</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-3">
+<div class="w-full bg-[#1C1C1C] rounded-t-sm relative h-full flex items-end">
+<div class="w-full bg-[#1C1C1C] h-0 rounded-t-sm"></div>
+</div>
+<span class="text-[10px] font-mono text-[#5C5C5C]">SAT</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-3">
+<div class="w-full bg-[#1C1C1C] rounded-t-sm relative h-full flex items-end">
+<div class="w-full bg-[#1C1C1C] h-0 rounded-t-sm"></div>
+</div>
+<span class="text-[10px] font-mono text-[#5C5C5C]">SUN</span>
+</div>
+</div>
+</div>
+<!-- Leaderboard Section -->
+<div class="bg-[#161616] rounded-[10px] overflow-hidden border border-outline-variant/10">
+<div class="p-8 pb-4">
+<h3 class="text-lg font-medium text-[#E8E8E8]">Collective Velocity</h3>
+<p class="text-[#5C5C5C] text-sm">Deep Work Leaderboard — Global Cohort</p>
+</div>
+<div class="px-8 pb-8">
+<table class="w-full text-left">
+<thead class="border-b border-outline-variant/10">
+<tr class="text-[10px] font-mono uppercase tracking-widest text-[#5C5C5C]">
+<th class="py-4 font-normal">Rank</th>
+<th class="py-4 font-normal">Name</th>
+<th class="py-4 font-normal">Activity</th>
+<th class="py-4 font-normal text-right">Hours</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/5">
+<tr class="group hover:bg-[#1C1C1C] transition-colors">
+<td class="py-4 font-mono text-xs text-[#5C5C5C]">01</td>
+<td class="py-4">
+<div class="flex items-center gap-3">
+<div class="h-6 w-6 rounded-full bg-gradient-to-tr from-[#1E3D2F] to-[#4CAF7D]"></div>
+<span class="text-sm font-medium text-[#E8E8E8]">Julian V.</span>
+</div>
+</td>
+<td class="py-4 w-48">
+<div class="h-1.5 w-full bg-[#1C1C1C] rounded-full overflow-hidden">
+<div class="h-full bg-[#4CAF7D] w-[92%]"></div>
+</div>
+</td>
+<td class="py-4 text-right font-mono text-sm text-[#E8E8E8]">42.5</td>
+</tr>
+<tr class="group hover:bg-[#1C1C1C] transition-colors">
+<td class="py-4 font-mono text-xs text-[#5C5C5C]">02</td>
+<td class="py-4">
+<div class="flex items-center gap-3">
+<div class="h-6 w-6 rounded-full bg-[#353534]"></div>
+<span class="text-sm font-medium text-[#E8E8E8]">Sarah K.</span>
+</div>
+</td>
+<td class="py-4 w-48">
+<div class="h-1.5 w-full bg-[#1C1C1C] rounded-full overflow-hidden">
+<div class="h-full bg-[#4CAF7D] w-[78%] opacity-60"></div>
+</div>
+</td>
+<td class="py-4 text-right font-mono text-sm text-[#E8E8E8]">36.8</td>
+</tr>
+<tr class="group bg-[#1C1C1C]/50">
+<td class="py-4 font-mono text-xs text-[#4CAF7D] font-bold">03</td>
+<td class="py-4">
+<div class="flex items-center gap-3">
+<img class="h-6 w-6 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBHLgrGVm6dGqzPU3Y__u3CagkTULFrQBUfdLV97gnTXdW38CXUY6-sz275z6By6E1Xw26VuS_nhJe18qeU3yPS8METeyzetJvAQ5B36c5ng9hmyYACUO19ohu14BM9BdMW4G2PQJ1AGfXRHsv-NMs4JRb3-a3RSFYv6qThVjW-9cxjMCe24z7vWIDNa9wL6x1uSk6DLg_Bm_bqw32j_udAhhwvHfEKklB2oJSJtCdPKvAB770JQ6dQfiNVehnTv3Mb6jlAl_9UgsHK"/>
+<span class="text-sm font-bold text-[#E8E8E8]">You</span>
+</div>
+</td>
+<td class="py-4 w-48">
+<div class="h-1.5 w-full bg-[#1C1C1C] rounded-full overflow-hidden">
+<div class="h-full bg-[#4CAF7D] w-[62%]"></div>
+</div>
+</td>
+<td class="py-4 text-right font-mono text-sm text-[#4CAF7D]">28.4</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Right Sidebar: Trends & Consistency -->
+<div class="col-span-12 lg:col-span-4 space-y-8">
+<!-- Month Trend Card -->
+<div class="bg-[#161616] rounded-[10px] p-6 border border-outline-variant/10">
+<h4 class="text-[10px] font-mono uppercase tracking-widest text-[#5C5C5C] mb-6">30-Day Velocity</h4>
+<div class="h-32 flex items-end gap-1 mb-4">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 100 40">
+<path d="M0 35 Q 10 30, 20 32 T 40 25 T 60 15 T 80 18 T 100 5" fill="none" stroke="#4CAF7D" stroke-width="1.5"></path>
+<path d="M0 35 Q 10 30, 20 32 T 40 25 T 60 15 T 80 18 T 100 5 V 40 H 0 Z" fill="url(#grad1)" opacity="0.1"></path>
+<defs>
+<lineargradient id="grad1" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" style="stop-color:#4CAF7D;stop-opacity:1"></stop>
+<stop offset="100%" style="stop-color:#4CAF7D;stop-opacity:0"></stop>
+</lineargradient>
+</defs>
+</svg>
+</div>
+<div class="flex justify-between items-center text-xs text-[#5C5C5C] font-mono">
+<span>APR 01</span>
+<span>APR 30</span>
+</div>
+</div>
+<!-- Consistency Score -->
+<div class="bg-[#1C1C1C] rounded-[10px] p-8 text-center border border-outline-variant/10">
+<h4 class="text-[10px] font-mono uppercase tracking-widest text-[#5C5C5C] mb-6">Consistency Score</h4>
+<div class="relative inline-flex items-center justify-center mb-6">
+<svg class="w-32 h-32 transform -rotate-90">
+<circle cx="64" cy="64" fill="transparent" r="58" stroke="#161616" stroke-width="6"></circle>
+<circle cx="64" cy="64" fill="transparent" r="58" stroke="#4CAF7D" stroke-dasharray="364.4" stroke-dashoffset="54.6" stroke-linecap="round" stroke-width="6"></circle>
+</svg>
+<div class="absolute flex flex-col items-center">
+<span class="text-3xl font-mono font-black text-[#E8E8E8]">85</span>
+<span class="text-[10px] text-[#5C5C5C] font-mono uppercase">Top 12%</span>
+</div>
+</div>
+<p class="text-xs text-[#5C5C5C] leading-relaxed">
+                            You have maintained a focus streak of <span class="text-[#E8E8E8]">14 days</span>. Maintain for 7 more days to reach "Architect" status.
+                        </p>
+</div>
+<!-- Weekly Report Card -->
+<div class="bg-gradient-to-br from-[#1C1C1C] to-[#161616] rounded-[10px] p-6 border border-[#4CAF7D]/10">
+<div class="flex items-start justify-between mb-6">
+<div>
+<h4 class="font-bold text-[#E8E8E8]">Weekly Report</h4>
+<p class="text-xs text-[#5C5C5C]">Generated Apr 28, 2024</p>
+</div>
+<span class="material-symbols-outlined text-[#4CAF7D]">description</span>
+</div>
+<div class="space-y-3">
+<button class="w-full bg-[#1C1C1C] border border-outline-variant/20 hover:border-[#4CAF7D]/40 text-[#E8E8E8] text-xs font-semibold py-2.5 rounded-[7px] flex items-center justify-center gap-2 transition-all">
+<span class="material-symbols-outlined text-sm">share</span>
+                                Share Progress
+                            </button>
+<button class="w-full bg-[#222222] hover:bg-[#262626] text-[#E8E8E8] text-xs font-semibold py-2.5 rounded-[7px] flex items-center justify-center gap-2 transition-all">
+<span class="material-symbols-outlined text-sm">download</span>
+                                Download PDF
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Background Decoration -->
+<div class="fixed top-0 right-0 w-[600px] h-[600px] bg-[#4CAF7D] opacity-[0.02] blur-[120px] pointer-events-none -z-10"></div>
+<div class="fixed bottom-0 left-[240px] w-[400px] h-[400px] bg-[#4CAF7D] opacity-[0.01] blur-[100px] pointer-events-none -z-10"></div>
+</body></html>
