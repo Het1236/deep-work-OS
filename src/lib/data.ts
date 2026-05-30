@@ -5,8 +5,9 @@ import type {
   Achievement, XPEvent, DashboardStats, Group, Note, PlannerBlock, ScoreboardData,
   FinanceAccount, FinanceCategory, Transaction, BudgetOverview, CategorySpend, DailySpend,
   CategoryBudgetStatus, SavingsGoal, SavingsContribution, SavingsGoalStatus,
+  RecurringRule, MonthlyTrend,
 } from '@/lib/types'
-import { monthRange, accountBalance, daysUntil } from '@/lib/finance'
+import { monthRange, accountBalance, daysUntil, addPeriod, monthKey, shiftMonth } from '@/lib/finance'
 
 const supabase = createClient()
 
@@ -1313,4 +1314,80 @@ export async function addContribution(
     await supabase.from('savings_goals').update({ is_achieved: true }).eq('id', goal.id)
   }
   return { justAchieved }
+}
+
+// ─── Finance: Recurring rules ─────────────────
+export async function getRecurringRules(userId: string): Promise<RecurringRule[]> {
+  const { data } = await supabase.from('recurring_rules')
+    .select('*').eq('user_id', userId).eq('is_active', true)
+    .order('next_run')
+  return (data || []) as RecurringRule[]
+}
+export async function createRecurringRule(r: Omit<RecurringRule, 'id' | 'created_at'>) {
+  const { data, error } = await supabase.from('recurring_rules').insert(r).select().single()
+  if (error) throw error
+  return data as RecurringRule
+}
+export async function updateRecurringRule(id: string, updates: Partial<RecurringRule>) {
+  const { error } = await supabase.from('recurring_rules').update(updates).eq('id', id)
+  if (error) throw error
+}
+export async function deleteRecurringRule(id: string) {
+  const { error } = await supabase.from('recurring_rules').update({ is_active: false }).eq('id', id)
+  if (error) throw error
+}
+
+// Materializes any due recurring occurrences into transactions and advances next_run.
+// Cron-free: runs on page load. Returns how many transactions were created.
+export async function processDueRecurring(userId: string): Promise<number> {
+  const rules = await getRecurringRules(userId)
+  const today = new Date().toISOString().split('T')[0]
+  let created = 0
+  for (const r of rules) {
+    let next = r.next_run
+    const toInsert: Omit<Transaction, 'id' | 'created_at'>[] = []
+    let guard = 0
+    while (next <= today && guard < 120) {
+      toInsert.push({
+        user_id: userId, type: r.type, amount: Number(r.amount),
+        category_id: r.category_id, account_id: r.account_id, to_account_id: null,
+        txn_date: next, note: r.note, recurring_id: r.id,
+      })
+      next = addPeriod(next, r.frequency)
+      guard++
+    }
+    if (toInsert.length > 0) {
+      await supabase.from('transactions').insert(toInsert)
+      await supabase.from('recurring_rules').update({ next_run: next }).eq('id', r.id)
+      created += toInsert.length
+    }
+  }
+  return created
+}
+
+// ─── Finance: Monthly trends ──────────────────
+export async function getMonthlyTrends(userId: string, months = 6, ref: Date = new Date()): Promise<MonthlyTrend[]> {
+  const startDate = shiftMonth(ref, -(months - 1))
+  const start = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-01`
+  const end = monthRange(ref).end
+  const txns = await getTransactions(userId, { start, end })
+
+  // Pre-seed every month bucket so gaps render as zero.
+  const buckets = new Map<string, MonthlyTrend>()
+  for (let i = months - 1; i >= 0; i--) {
+    const m = shiftMonth(ref, -i)
+    buckets.set(monthKey(m), {
+      month: monthKey(m),
+      label: m.toLocaleDateString('en-IN', { month: 'short' }),
+      income: 0, expense: 0, net: 0,
+    })
+  }
+  for (const t of txns) {
+    const key = t.txn_date.slice(0, 7)
+    const b = buckets.get(key)
+    if (!b) continue
+    if (t.type === 'income') b.income += Number(t.amount)
+    else if (t.type === 'expense') b.expense += Number(t.amount)
+  }
+  return [...buckets.values()].map(b => ({ ...b, net: b.income - b.expense }))
 }

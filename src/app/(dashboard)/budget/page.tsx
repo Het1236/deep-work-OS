@@ -2,11 +2,16 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@/components/UserContext'
-import { seedFinanceDefaults, getBudgetOverview, getCategories, getAccounts, getBudgetStatus, getSavingsGoals } from '@/lib/data'
-import type { BudgetOverview, FinanceCategory, FinanceAccount, CategoryBudgetStatus, SavingsGoalStatus } from '@/lib/types'
-import { formatINR } from '@/lib/finance'
+import {
+  seedFinanceDefaults, getBudgetOverview, getCategories, getAccounts,
+  getBudgetStatus, getSavingsGoals, getMonthlyTrends, processDueRecurring,
+} from '@/lib/data'
+import type {
+  BudgetOverview, FinanceCategory, FinanceAccount, CategoryBudgetStatus, SavingsGoalStatus, MonthlyTrend,
+} from '@/lib/types'
+import { formatINR, monthLabel, shiftMonth } from '@/lib/finance'
 import { motion } from 'framer-motion'
-import { Loader2, Wallet, TrendingUp, TrendingDown, Scale } from 'lucide-react'
+import { Loader2, Wallet, TrendingUp, TrendingDown, Scale, ChevronLeft, ChevronRight } from 'lucide-react'
 import OverviewTab from './OverviewTab'
 import TransactionsTab from './TransactionsTab'
 import BudgetsTab from './BudgetsTab'
@@ -15,26 +20,36 @@ import './budget.css'
 
 type Tab = 'overview' | 'transactions' | 'budgets' | 'goals'
 
+const isCurrentMonth = (d: Date) => {
+  const now = new Date()
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+}
+
 export default function BudgetPage() {
   const { userId, lastUpdate, triggerRefresh } = useUser()
   const [tab, setTab] = useState<Tab>('overview')
+  const [refMonth, setRefMonth] = useState<Date>(() => new Date())
   const [overview, setOverview] = useState<BudgetOverview | null>(null)
   const [categories, setCategories] = useState<FinanceCategory[]>([])
   const [accounts, setAccounts] = useState<FinanceAccount[]>([])
   const [budgetStatus, setBudgetStatus] = useState<CategoryBudgetStatus[]>([])
   const [goals, setGoals] = useState<SavingsGoalStatus[]>([])
+  const [trends, setTrends] = useState<MonthlyTrend[]>([])
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
     if (!userId) return
     setLoading(true)
     await seedFinanceDefaults(userId)
-    const [ov, cats, accts, status, gls] = await Promise.all([
-      getBudgetOverview(userId), getCategories(userId), getAccounts(userId), getBudgetStatus(userId), getSavingsGoals(userId),
+    await processDueRecurring(userId)
+    const [ov, cats, accts, status, gls, trd] = await Promise.all([
+      getBudgetOverview(userId, refMonth), getCategories(userId), getAccounts(userId),
+      getBudgetStatus(userId, refMonth), getSavingsGoals(userId), getMonthlyTrends(userId, 6, refMonth),
     ])
-    setOverview(ov); setCategories(cats); setAccounts(accts); setBudgetStatus(status); setGoals(gls); setLoading(false)
+    setOverview(ov); setCategories(cats); setAccounts(accts)
+    setBudgetStatus(status); setGoals(gls); setTrends(trd); setLoading(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, lastUpdate])
+  }, [userId, lastUpdate, refMonth])
 
   useEffect(() => { load() }, [load])
 
@@ -47,11 +62,12 @@ export default function BudgetPage() {
     )
   }
 
+  const atCurrent = isCurrentMonth(refMonth)
   const stats = [
     { label: 'Total Balance', value: overview.totalBalance, icon: Wallet, color: 'var(--accent)' },
-    { label: 'Income (this month)', value: overview.monthIncome, icon: TrendingUp, color: 'var(--status-success)' },
-    { label: 'Spent (this month)', value: overview.monthExpense, icon: TrendingDown, color: 'var(--status-danger)' },
-    { label: 'Net (this month)', value: overview.monthNet, icon: Scale, color: overview.monthNet >= 0 ? 'var(--status-success)' : 'var(--status-danger)' },
+    { label: 'Income', value: overview.monthIncome, icon: TrendingUp, color: 'var(--status-success)' },
+    { label: 'Spent', value: overview.monthExpense, icon: TrendingDown, color: 'var(--status-danger)' },
+    { label: 'Net', value: overview.monthNet, icon: Scale, color: overview.monthNet >= 0 ? 'var(--status-success)' : 'var(--status-danger)' },
   ]
 
   return (
@@ -60,6 +76,12 @@ export default function BudgetPage() {
         <div>
           <div className="text-subheading">MONEY PROTOCOL</div>
           <h1 className="text-display">Budget Tracker</h1>
+        </div>
+        <div className="bg-month-switcher">
+          <button className="bg-icon-btn" title="Previous month" onClick={() => setRefMonth(m => shiftMonth(m, -1))}><ChevronLeft size={18} /></button>
+          <span className="bg-month-label">{monthLabel(refMonth)}</span>
+          <button className="bg-icon-btn" title="Next month" onClick={() => setRefMonth(m => shiftMonth(m, 1))} disabled={atCurrent}><ChevronRight size={18} /></button>
+          {!atCurrent && <button className="bg-btn bg-btn--sm" onClick={() => setRefMonth(new Date())}>Today</button>}
         </div>
       </div>
 
@@ -89,8 +111,8 @@ export default function BudgetPage() {
         <button className={`bg-tab${tab === 'goals' ? ' bg-tab--active' : ''}`} onClick={() => setTab('goals')}>Goals</button>
       </div>
 
-      {tab === 'overview' && <OverviewTab overview={overview} />}
-      {tab === 'transactions' && <TransactionsTab userId={userId!} categories={categories} accounts={accounts} onChanged={() => { load(); triggerRefresh() }} />}
+      {tab === 'overview' && <OverviewTab overview={overview} trends={trends} />}
+      {tab === 'transactions' && <TransactionsTab userId={userId!} categories={categories} accounts={accounts} refMonth={refMonth} onChanged={() => { load(); triggerRefresh() }} />}
       {tab === 'budgets' && <BudgetsTab status={budgetStatus} onManage={() => setTab('transactions')} />}
       {tab === 'goals' && <GoalsTab userId={userId!} goals={goals} onChanged={() => { load(); triggerRefresh() }} />}
     </div>

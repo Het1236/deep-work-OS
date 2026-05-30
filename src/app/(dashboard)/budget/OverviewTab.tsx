@@ -1,11 +1,11 @@
 'use client'
 
-import type { BudgetOverview } from '@/lib/types'
+import type { BudgetOverview, MonthlyTrend } from '@/lib/types'
 import { formatINR } from '@/lib/finance'
 import { PieChartIcon, Inbox } from 'lucide-react'
 import {
   PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis,
-  CartesianGrid, Tooltip, ResponsiveContainer,
+  CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend,
 } from 'recharts'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -31,8 +31,9 @@ const moneyTooltip = ({ active, payload, label }: any) => {
   )
 }
 
-export default function OverviewTab({ overview }: { overview: BudgetOverview }) {
+export default function OverviewTab({ overview, trends }: { overview: BudgetOverview; trends: MonthlyTrend[] }) {
   const { accounts, categorySpend, dailySeries, recentTransactions, monthExpense } = overview
+  const hasTrends = trends.some(t => t.income > 0 || t.expense > 0)
 
   const dailyData = dailySeries.map(d => ({
     day: d.date.slice(8), // DD
@@ -63,6 +64,24 @@ export default function OverviewTab({ overview }: { overview: BudgetOverview }) 
         <div className="bg-card bg-empty">
           <div className="bg-empty-icon"><Inbox size={32} /></div>
           No activity this month yet — add a transaction to see your charts come alive.
+        </div>
+      )}
+
+      {hasTrends && (
+        <div className="bg-card" style={{ marginBottom: 'var(--space-lg)' }}>
+          <div className="bg-card-title">6-Month Trend</div>
+          <div className="bg-card-subtitle">Income vs spending over time</div>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={trends} margin={{ top: 16, right: 6, left: -18, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+              <XAxis dataKey="label" tick={{ fill: '#666', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#666', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <Tooltip content={moneyTooltip} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+              <Legend wrapperStyle={{ fontSize: '0.75rem' }} />
+              <Bar dataKey="income" name="Income" fill="#4CAF7D" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="expense" name="Expense" fill="#E85D5D" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       )}
 

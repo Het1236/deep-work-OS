@@ -302,3 +302,21 @@ export type SavingsGoalStatus = SavingsGoal & {
   pct: number          // 0..100 (capped)
   daysLeft: number | null
 }
+
+export type RecurringFrequency = 'daily' | 'weekly' | 'monthly'
+
+export type RecurringRule = {
+  id: string
+  user_id: string
+  type: 'income' | 'expense'
+  amount: number
+  category_id: string | null
+  account_id: string | null
+  note: string | null
+  frequency: RecurringFrequency
+  next_run: string
+  is_active: boolean
+  created_at: string
+}
+
+export type MonthlyTrend = { month: string; label: string; income: number; expense: number; net: number }
