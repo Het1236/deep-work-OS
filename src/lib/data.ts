@@ -2,8 +2,10 @@ import { createClient } from '@/lib/supabase/client'
 import type {
   Profile, DeepWorkSession, Habit, HabitLog,
   Goal, Project, Task, JournalEntry, TimeBlock,
-  Achievement, XPEvent, DashboardStats, Group, Note, PlannerBlock, ScoreboardData
+  Achievement, XPEvent, DashboardStats, Group, Note, PlannerBlock, ScoreboardData,
+  FinanceAccount, FinanceCategory, Transaction, BudgetOverview, CategorySpend, DailySpend,
 } from '@/lib/types'
+import { monthRange, accountBalance } from '@/lib/finance'
 
 const supabase = createClient()
 
@@ -735,12 +737,14 @@ export type XPAction =
   | 'habit_complete'     // +5 XP per habit checked
   | 'shutdown_ritual'    // +15 XP for completing shutdown
   | 'journal_entry'      // +10 XP per journal entry
+  | 'finance_log'        // +3 XP for first transaction logged that day
 
 const XP_VALUES: Record<XPAction, number> = {
   session_complete: 10,
   habit_complete: 5,
   shutdown_ritual: 15,
   journal_entry: 10,
+  finance_log: 3,
 }
 
 export async function awardXP(
@@ -1063,4 +1067,161 @@ export async function mergePlannerBlocks(keepId: string, removeId: string, newEn
     .delete()
     .eq('id', removeId)
   if (delErr) throw delErr
+}
+
+// ═══════════════════════════════════════════════
+// Finance / Budget Tracker
+// ═══════════════════════════════════════════════
+
+// ─── Finance: Accounts (wallets) ──────────────
+export async function getAccounts(userId: string): Promise<FinanceAccount[]> {
+  const { data } = await supabase.from('finance_accounts')
+    .select('*').eq('user_id', userId).eq('is_active', true)
+    .order('sort_order').order('created_at')
+  return (data || []) as FinanceAccount[]
+}
+export async function createAccount(a: Omit<FinanceAccount, 'id' | 'created_at'>) {
+  const { data, error } = await supabase.from('finance_accounts').insert(a).select().single()
+  if (error) throw error
+  return data as FinanceAccount
+}
+export async function updateAccount(id: string, updates: Partial<FinanceAccount>) {
+  const { error } = await supabase.from('finance_accounts').update(updates).eq('id', id)
+  if (error) throw error
+}
+export async function deleteAccount(id: string) {
+  const { error } = await supabase.from('finance_accounts').update({ is_active: false }).eq('id', id)
+  if (error) throw error
+}
+
+// ─── Finance: Categories ──────────────────────
+export async function getCategories(userId: string): Promise<FinanceCategory[]> {
+  const { data } = await supabase.from('finance_categories')
+    .select('*').eq('user_id', userId).eq('is_archived', false)
+    .order('sort_order').order('created_at')
+  return (data || []) as FinanceCategory[]
+}
+export async function createCategory(c: Omit<FinanceCategory, 'id' | 'created_at'>) {
+  const { data, error } = await supabase.from('finance_categories').insert(c).select().single()
+  if (error) throw error
+  return data as FinanceCategory
+}
+export async function updateCategory(id: string, updates: Partial<FinanceCategory>) {
+  const { error } = await supabase.from('finance_categories').update(updates).eq('id', id)
+  if (error) throw error
+}
+export async function deleteCategory(id: string) {
+  const { error } = await supabase.from('finance_categories').update({ is_archived: true }).eq('id', id)
+  if (error) throw error
+}
+
+// Seed default student categories + wallets if user has none. Idempotent.
+export async function seedFinanceDefaults(userId: string): Promise<void> {
+  const existing = await getCategories(userId)
+  if (existing.length === 0) {
+    const expense: [string, string][] = [
+      ['Food & Dining', '#E85D5D'], ['Travel', '#5B9BD5'], ['Groceries', '#4CAF7D'],
+      ['Rent/Hostel', '#F5A623'], ['Mobile/Internet', '#9B7EDE'], ['Education', '#50b380'],
+      ['Entertainment', '#E89B5D'], ['Shopping', '#E85D9B'], ['Health', '#5DC9E8'], ['Misc', '#888888'],
+    ]
+    const income: [string, string][] = [
+      ['Allowance', '#96fac2'], ['Freelance', '#5B9BD5'], ['Gifts', '#F5A623'], ['Other', '#888888'],
+    ]
+    const rows = [
+      ...expense.map(([name, color], i) => ({ user_id: userId, name, kind: 'expense', color, sort_order: i, is_archived: false, monthly_budget: null, icon: null })),
+      ...income.map(([name, color], i) => ({ user_id: userId, name, kind: 'income', color, sort_order: i, is_archived: false, monthly_budget: null, icon: null })),
+    ]
+    await supabase.from('finance_categories').insert(rows)
+  }
+  const accts = await getAccounts(userId)
+  if (accts.length === 0) {
+    await supabase.from('finance_accounts').insert([
+      { user_id: userId, name: 'Cash', type: 'cash', opening_balance: 0, color: '#96fac2', sort_order: 0, is_active: true, icon: null },
+      { user_id: userId, name: 'UPI', type: 'upi', opening_balance: 0, color: '#5B9BD5', sort_order: 1, is_active: true, icon: null },
+      { user_id: userId, name: 'Bank', type: 'bank', opening_balance: 0, color: '#F5A623', sort_order: 2, is_active: true, icon: null },
+    ])
+  }
+}
+
+// ─── Finance: Transactions ────────────────────
+export async function getTransactions(userId: string, opts?: {
+  start?: string; end?: string; type?: 'income' | 'expense' | 'transfer'; categoryId?: string; limit?: number
+}): Promise<Transaction[]> {
+  let q = supabase.from('transactions').select('*').eq('user_id', userId)
+  if (opts?.start) q = q.gte('txn_date', opts.start)
+  if (opts?.end) q = q.lte('txn_date', opts.end)
+  if (opts?.type) q = q.eq('type', opts.type)
+  if (opts?.categoryId) q = q.eq('category_id', opts.categoryId)
+  q = q.order('txn_date', { ascending: false }).order('created_at', { ascending: false })
+  if (opts?.limit) q = q.limit(opts.limit)
+  const { data } = await q
+  return (data || []) as Transaction[]
+}
+export async function createTransaction(t: Omit<Transaction, 'id' | 'created_at'>) {
+  const { data, error } = await supabase.from('transactions').insert(t).select().single()
+  if (error) throw error
+  return data as Transaction
+}
+export async function updateTransaction(id: string, updates: Partial<Transaction>) {
+  const { error } = await supabase.from('transactions').update(updates).eq('id', id)
+  if (error) throw error
+}
+export async function deleteTransaction(id: string) {
+  const { error } = await supabase.from('transactions').delete().eq('id', id)
+  if (error) throw error
+}
+
+// Returns true if no transaction exists yet for today's date (drives once-per-day XP).
+export async function isFirstLogToday(userId: string): Promise<boolean> {
+  const today = new Date().toISOString().split('T')[0]
+  const { count } = await supabase.from('transactions')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId).eq('txn_date', today)
+  return (count || 0) === 0
+}
+
+// ─── Finance: Overview aggregation ────────────
+export async function getBudgetOverview(userId: string, ref: Date = new Date()): Promise<BudgetOverview> {
+  const { start, end } = monthRange(ref)
+  const [accounts, categories, allTxns, monthTxns] = await Promise.all([
+    getAccounts(userId),
+    getCategories(userId),
+    getTransactions(userId),                       // all-time, for true balances
+    getTransactions(userId, { start, end }),       // this month, for stats
+  ])
+
+  const accountsWithBal = accounts.map(a => ({ ...a, balance: accountBalance(a, allTxns) }))
+  const totalBalance = accountsWithBal.reduce((s, a) => s + a.balance, 0)
+
+  let monthIncome = 0, monthExpense = 0
+  for (const t of monthTxns) {
+    if (t.type === 'income') monthIncome += Number(t.amount)
+    else if (t.type === 'expense') monthExpense += Number(t.amount)
+  }
+
+  const catMap = new Map(categories.map(c => [c.id, c]))
+  const spendByCat = new Map<string, number>()
+  for (const t of monthTxns) {
+    if (t.type !== 'expense' || !t.category_id) continue
+    spendByCat.set(t.category_id, (spendByCat.get(t.category_id) || 0) + Number(t.amount))
+  }
+  const categorySpend: CategorySpend[] = [...spendByCat.entries()].map(([id, total]) => ({
+    categoryId: id, name: catMap.get(id)?.name || 'Uncategorized',
+    color: catMap.get(id)?.color || '#888888', total,
+  })).sort((a, b) => b.total - a.total)
+
+  const dayMap = new Map<string, DailySpend>()
+  for (const t of monthTxns) {
+    const d = dayMap.get(t.txn_date) || { date: t.txn_date, income: 0, expense: 0 }
+    if (t.type === 'income') d.income += Number(t.amount)
+    else if (t.type === 'expense') d.expense += Number(t.amount)
+    dayMap.set(t.txn_date, d)
+  }
+  const dailySeries = [...dayMap.values()].sort((a, b) => a.date.localeCompare(b.date))
+
+  return {
+    totalBalance, monthIncome, monthExpense, monthNet: monthIncome - monthExpense,
+    accounts: accountsWithBal, categorySpend, dailySeries,
+    recentTransactions: monthTxns.slice(0, 8),
+  }
 }

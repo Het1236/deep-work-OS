@@ -206,3 +206,58 @@ export type ScoreboardData = {
   // Session history
   sessions: DeepWorkSession[]
 }
+
+// ─── Finance / Budget ─────────────────────────
+export type FinanceAccount = {
+  id: string
+  user_id: string
+  name: string
+  type: 'cash' | 'bank' | 'upi' | 'wallet' | 'other'
+  opening_balance: number
+  icon: string | null
+  color: string | null
+  is_active: boolean
+  sort_order: number
+  created_at: string
+}
+
+export type FinanceCategory = {
+  id: string
+  user_id: string
+  name: string
+  kind: 'income' | 'expense'
+  icon: string | null
+  color: string | null
+  monthly_budget: number | null
+  sort_order: number
+  is_archived: boolean
+  created_at: string
+}
+
+export type Transaction = {
+  id: string
+  user_id: string
+  type: 'income' | 'expense' | 'transfer'
+  amount: number
+  category_id: string | null
+  account_id: string | null
+  to_account_id: string | null
+  txn_date: string
+  note: string | null
+  recurring_id: string | null
+  created_at: string
+}
+
+export type CategorySpend = { categoryId: string; name: string; color: string; total: number }
+export type DailySpend = { date: string; income: number; expense: number }
+
+export type BudgetOverview = {
+  totalBalance: number
+  monthIncome: number
+  monthExpense: number
+  monthNet: number
+  accounts: (FinanceAccount & { balance: number })[]
+  categorySpend: CategorySpend[]      // expense breakdown for the month
+  dailySeries: DailySpend[]           // per-day income/expense for the month
+  recentTransactions: Transaction[]   // latest 8
+}
