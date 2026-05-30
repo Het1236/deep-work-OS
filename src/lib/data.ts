@@ -4,6 +4,7 @@ import type {
   Goal, Project, Task, JournalEntry, TimeBlock,
   Achievement, XPEvent, DashboardStats, Group, Note, PlannerBlock, ScoreboardData,
   FinanceAccount, FinanceCategory, Transaction, BudgetOverview, CategorySpend, DailySpend,
+  CategoryBudgetStatus,
 } from '@/lib/types'
 import { monthRange, accountBalance } from '@/lib/finance'
 
@@ -1224,4 +1225,32 @@ export async function getBudgetOverview(userId: string, ref: Date = new Date()):
     accounts: accountsWithBal, categorySpend, dailySeries,
     recentTransactions: monthTxns.slice(0, 8),
   }
+}
+
+// Per-expense-category budget vs actual for the month. Used by the Budgets tab.
+export async function getBudgetStatus(userId: string, ref: Date = new Date()): Promise<CategoryBudgetStatus[]> {
+  const { start, end } = monthRange(ref)
+  const [categories, monthTxns] = await Promise.all([
+    getCategories(userId),
+    getTransactions(userId, { start, end, type: 'expense' }),
+  ])
+  const spend = new Map<string, number>()
+  for (const t of monthTxns) {
+    if (!t.category_id) continue
+    spend.set(t.category_id, (spend.get(t.category_id) || 0) + Number(t.amount))
+  }
+  return categories
+    .filter(c => c.kind === 'expense')
+    .map(c => {
+      const budget = Number(c.monthly_budget) || 0
+      const spent = spend.get(c.id) || 0
+      const remaining = budget - spent
+      const pct = budget > 0 ? Math.round((spent / budget) * 100) : 0
+      return { categoryId: c.id, name: c.name, color: c.color || '#888888', budget, spent, remaining, pct, over: budget > 0 && spent > budget }
+    })
+    .sort((a, b) => {
+      if ((a.budget > 0) !== (b.budget > 0)) return a.budget > 0 ? -1 : 1
+      if (a.budget > 0) return b.pct - a.pct
+      return b.spent - a.spent
+    })
 }

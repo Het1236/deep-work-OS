@@ -251,6 +251,17 @@ export type Transaction = {
 export type CategorySpend = { categoryId: string; name: string; color: string; total: number }
 export type DailySpend = { date: string; income: number; expense: number }
 
+export type CategoryBudgetStatus = {
+  categoryId: string
+  name: string
+  color: string
+  budget: number       // monthly_budget (0 if unset)
+  spent: number        // this month's expense in this category
+  remaining: number    // budget - spent (can be negative)
+  pct: number          // 0..100+ (spent/budget*100; 0 if no budget)
+  over: boolean        // spent > budget (and budget > 0)
+}
+
 export type BudgetOverview = {
   totalBalance: number
   monthIncome: number

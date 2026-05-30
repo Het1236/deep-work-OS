@@ -2,16 +2,17 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@/components/UserContext'
-import { seedFinanceDefaults, getBudgetOverview, getCategories, getAccounts } from '@/lib/data'
-import type { BudgetOverview, FinanceCategory, FinanceAccount } from '@/lib/types'
+import { seedFinanceDefaults, getBudgetOverview, getCategories, getAccounts, getBudgetStatus } from '@/lib/data'
+import type { BudgetOverview, FinanceCategory, FinanceAccount, CategoryBudgetStatus } from '@/lib/types'
 import { formatINR } from '@/lib/finance'
 import { motion } from 'framer-motion'
 import { Loader2, Wallet, TrendingUp, TrendingDown, Scale } from 'lucide-react'
 import OverviewTab from './OverviewTab'
 import TransactionsTab from './TransactionsTab'
+import BudgetsTab from './BudgetsTab'
 import './budget.css'
 
-type Tab = 'overview' | 'transactions'
+type Tab = 'overview' | 'transactions' | 'budgets'
 
 export default function BudgetPage() {
   const { userId, lastUpdate, triggerRefresh } = useUser()
@@ -19,16 +20,17 @@ export default function BudgetPage() {
   const [overview, setOverview] = useState<BudgetOverview | null>(null)
   const [categories, setCategories] = useState<FinanceCategory[]>([])
   const [accounts, setAccounts] = useState<FinanceAccount[]>([])
+  const [budgetStatus, setBudgetStatus] = useState<CategoryBudgetStatus[]>([])
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
     if (!userId) return
     setLoading(true)
     await seedFinanceDefaults(userId)
-    const [ov, cats, accts] = await Promise.all([
-      getBudgetOverview(userId), getCategories(userId), getAccounts(userId),
+    const [ov, cats, accts, status] = await Promise.all([
+      getBudgetOverview(userId), getCategories(userId), getAccounts(userId), getBudgetStatus(userId),
     ])
-    setOverview(ov); setCategories(cats); setAccounts(accts); setLoading(false)
+    setOverview(ov); setCategories(cats); setAccounts(accts); setBudgetStatus(status); setLoading(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, lastUpdate])
 
@@ -81,11 +83,12 @@ export default function BudgetPage() {
       <div className="bg-tabs">
         <button className={`bg-tab${tab === 'overview' ? ' bg-tab--active' : ''}`} onClick={() => setTab('overview')}>Overview</button>
         <button className={`bg-tab${tab === 'transactions' ? ' bg-tab--active' : ''}`} onClick={() => setTab('transactions')}>Transactions</button>
+        <button className={`bg-tab${tab === 'budgets' ? ' bg-tab--active' : ''}`} onClick={() => setTab('budgets')}>Budgets</button>
       </div>
 
-      {tab === 'overview'
-        ? <OverviewTab overview={overview} />
-        : <TransactionsTab userId={userId!} categories={categories} accounts={accounts} onChanged={() => { load(); triggerRefresh() }} />}
+      {tab === 'overview' && <OverviewTab overview={overview} />}
+      {tab === 'transactions' && <TransactionsTab userId={userId!} categories={categories} accounts={accounts} onChanged={() => { load(); triggerRefresh() }} />}
+      {tab === 'budgets' && <BudgetsTab status={budgetStatus} onManage={() => setTab('transactions')} />}
     </div>
   )
 }

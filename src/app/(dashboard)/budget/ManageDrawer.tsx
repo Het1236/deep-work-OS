@@ -4,7 +4,7 @@ import { useState } from 'react'
 import type { FinanceAccount, FinanceCategory } from '@/lib/types'
 import {
   createAccount, updateAccount, deleteAccount,
-  createCategory, deleteCategory,
+  createCategory, updateCategory, deleteCategory,
 } from '@/lib/data'
 import { X, Plus, Trash2, Check } from 'lucide-react'
 
@@ -112,10 +112,21 @@ export default function ManageDrawer({
         {/* Categories */}
         <div className="bg-manage-section">
           <div className="bg-section-label">Expense categories</div>
+          <div style={{ fontSize: '0.6875rem', color: 'var(--text-tertiary)', marginBottom: 8 }}>Set a monthly budget (₹) per category — leave blank for none.</div>
           {expenseCats.map(c => (
             <div className="bg-manage-row" key={c.id}>
               <span className="bg-color-swatch" style={{ background: c.color || '#888' }} />
               <div style={{ flex: 1, fontSize: '0.875rem', color: 'var(--text-primary)' }}>{c.name}</div>
+              <input
+                className="bg-input bg-budget-set" type="number" min="0" step="1"
+                placeholder="Budget" defaultValue={c.monthly_budget ?? ''} title="Monthly budget (₹)"
+                onBlur={async e => {
+                  const raw = e.target.value.trim()
+                  const v = raw === '' ? null : parseFloat(raw)
+                  if (v !== null && Number.isNaN(v)) return
+                  if (v !== (c.monthly_budget ?? null)) { await updateCategory(c.id, { monthly_budget: v }); onChanged() }
+                }}
+              />
               <button className="bg-icon-btn" title="Remove" onClick={async () => { await deleteCategory(c.id); onChanged() }}><Trash2 size={14} /></button>
             </div>
           ))}

@@ -490,3 +490,17 @@
 
 .amt-pos { color: var(--status-success); }
 .amt-neg { color: var(--status-danger); }
+
+/* ---- Budgets tab ---- */
+.bg-budget-row { padding: 14px 0; border-bottom: 1px solid var(--border-subtle); }
+.bg-budget-row:last-child { border-bottom: none; }
+.bg-budget-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.bg-budget-name { font-size: 0.875rem; color: var(--text-primary); font-weight: 600; flex: 1; }
+.bg-budget-figs { font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-tertiary); }
+.bg-bar-track { height: 8px; border-radius: var(--radius-full); background: var(--bg-input); overflow: hidden; }
+.bg-bar-fill { height: 100%; border-radius: var(--radius-full); transition: width 0.5s ease; }
+.bg-budget-foot { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.6875rem; }
+.bg-alert { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: var(--radius-md);
+  background: rgba(232,93,93,0.1); border: 1px solid rgba(232,93,93,0.3); color: var(--status-danger);
+  font-size: 0.8125rem; margin-bottom: var(--space-lg); }
+.bg-budget-set { width: 110px; }
