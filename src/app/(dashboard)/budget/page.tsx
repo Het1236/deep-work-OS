@@ -2,17 +2,18 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@/components/UserContext'
-import { seedFinanceDefaults, getBudgetOverview, getCategories, getAccounts, getBudgetStatus } from '@/lib/data'
-import type { BudgetOverview, FinanceCategory, FinanceAccount, CategoryBudgetStatus } from '@/lib/types'
+import { seedFinanceDefaults, getBudgetOverview, getCategories, getAccounts, getBudgetStatus, getSavingsGoals } from '@/lib/data'
+import type { BudgetOverview, FinanceCategory, FinanceAccount, CategoryBudgetStatus, SavingsGoalStatus } from '@/lib/types'
 import { formatINR } from '@/lib/finance'
 import { motion } from 'framer-motion'
 import { Loader2, Wallet, TrendingUp, TrendingDown, Scale } from 'lucide-react'
 import OverviewTab from './OverviewTab'
 import TransactionsTab from './TransactionsTab'
 import BudgetsTab from './BudgetsTab'
+import GoalsTab from './GoalsTab'
 import './budget.css'
 
-type Tab = 'overview' | 'transactions' | 'budgets'
+type Tab = 'overview' | 'transactions' | 'budgets' | 'goals'
 
 export default function BudgetPage() {
   const { userId, lastUpdate, triggerRefresh } = useUser()
@@ -21,16 +22,17 @@ export default function BudgetPage() {
   const [categories, setCategories] = useState<FinanceCategory[]>([])
   const [accounts, setAccounts] = useState<FinanceAccount[]>([])
   const [budgetStatus, setBudgetStatus] = useState<CategoryBudgetStatus[]>([])
+  const [goals, setGoals] = useState<SavingsGoalStatus[]>([])
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
     if (!userId) return
     setLoading(true)
     await seedFinanceDefaults(userId)
-    const [ov, cats, accts, status] = await Promise.all([
-      getBudgetOverview(userId), getCategories(userId), getAccounts(userId), getBudgetStatus(userId),
+    const [ov, cats, accts, status, gls] = await Promise.all([
+      getBudgetOverview(userId), getCategories(userId), getAccounts(userId), getBudgetStatus(userId), getSavingsGoals(userId),
     ])
-    setOverview(ov); setCategories(cats); setAccounts(accts); setBudgetStatus(status); setLoading(false)
+    setOverview(ov); setCategories(cats); setAccounts(accts); setBudgetStatus(status); setGoals(gls); setLoading(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, lastUpdate])
 
@@ -84,11 +86,13 @@ export default function BudgetPage() {
         <button className={`bg-tab${tab === 'overview' ? ' bg-tab--active' : ''}`} onClick={() => setTab('overview')}>Overview</button>
         <button className={`bg-tab${tab === 'transactions' ? ' bg-tab--active' : ''}`} onClick={() => setTab('transactions')}>Transactions</button>
         <button className={`bg-tab${tab === 'budgets' ? ' bg-tab--active' : ''}`} onClick={() => setTab('budgets')}>Budgets</button>
+        <button className={`bg-tab${tab === 'goals' ? ' bg-tab--active' : ''}`} onClick={() => setTab('goals')}>Goals</button>
       </div>
 
       {tab === 'overview' && <OverviewTab overview={overview} />}
       {tab === 'transactions' && <TransactionsTab userId={userId!} categories={categories} accounts={accounts} onChanged={() => { load(); triggerRefresh() }} />}
       {tab === 'budgets' && <BudgetsTab status={budgetStatus} onManage={() => setTab('transactions')} />}
+      {tab === 'goals' && <GoalsTab userId={userId!} goals={goals} onChanged={() => { load(); triggerRefresh() }} />}
     </div>
   )
 }

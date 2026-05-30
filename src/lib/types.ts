@@ -272,3 +272,33 @@ export type BudgetOverview = {
   dailySeries: DailySpend[]           // per-day income/expense for the month
   recentTransactions: Transaction[]   // latest 8
 }
+
+export type SavingsGoal = {
+  id: string
+  user_id: string
+  name: string
+  target_amount: number
+  target_date: string | null
+  icon: string | null
+  color: string | null
+  is_achieved: boolean
+  sort_order: number
+  created_at: string
+}
+
+export type SavingsContribution = {
+  id: string
+  user_id: string
+  goal_id: string
+  amount: number
+  contributed_at: string
+  note: string | null
+  created_at: string
+}
+
+export type SavingsGoalStatus = SavingsGoal & {
+  saved: number
+  remaining: number
+  pct: number          // 0..100 (capped)
+  daysLeft: number | null
+}

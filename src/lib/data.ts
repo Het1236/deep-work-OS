@@ -4,9 +4,9 @@ import type {
   Goal, Project, Task, JournalEntry, TimeBlock,
   Achievement, XPEvent, DashboardStats, Group, Note, PlannerBlock, ScoreboardData,
   FinanceAccount, FinanceCategory, Transaction, BudgetOverview, CategorySpend, DailySpend,
-  CategoryBudgetStatus,
+  CategoryBudgetStatus, SavingsGoal, SavingsContribution, SavingsGoalStatus,
 } from '@/lib/types'
-import { monthRange, accountBalance } from '@/lib/finance'
+import { monthRange, accountBalance, daysUntil } from '@/lib/finance'
 
 const supabase = createClient()
 
@@ -739,6 +739,7 @@ export type XPAction =
   | 'shutdown_ritual'    // +15 XP for completing shutdown
   | 'journal_entry'      // +10 XP per journal entry
   | 'finance_log'        // +3 XP for first transaction logged that day
+  | 'savings_funded'     // +20 XP when a savings goal is fully funded
 
 const XP_VALUES: Record<XPAction, number> = {
   session_complete: 10,
@@ -746,6 +747,7 @@ const XP_VALUES: Record<XPAction, number> = {
   shutdown_ritual: 15,
   journal_entry: 10,
   finance_log: 3,
+  savings_funded: 20,
 }
 
 export async function awardXP(
@@ -1253,4 +1255,62 @@ export async function getBudgetStatus(userId: string, ref: Date = new Date()): P
       if (a.budget > 0) return b.pct - a.pct
       return b.spent - a.spent
     })
+}
+
+// ─── Finance: Savings goals ───────────────────
+export async function getSavingsGoals(userId: string): Promise<SavingsGoalStatus[]> {
+  const [{ data: goals }, { data: contribs }] = await Promise.all([
+    supabase.from('savings_goals').select('*').eq('user_id', userId).order('is_achieved').order('sort_order').order('created_at'),
+    supabase.from('savings_contributions').select('goal_id, amount').eq('user_id', userId),
+  ])
+  const savedMap = new Map<string, number>()
+  for (const c of (contribs || []) as { goal_id: string; amount: number }[]) {
+    savedMap.set(c.goal_id, (savedMap.get(c.goal_id) || 0) + Number(c.amount))
+  }
+  return ((goals || []) as SavingsGoal[]).map(g => {
+    const saved = savedMap.get(g.id) || 0
+    const target = Number(g.target_amount) || 0
+    const remaining = Math.max(0, target - saved)
+    const pct = target > 0 ? Math.min(100, Math.round((saved / target) * 100)) : 0
+    return { ...g, saved, remaining, pct, daysLeft: g.target_date ? daysUntil(g.target_date) : null }
+  })
+}
+
+export async function createSavingsGoal(g: Omit<SavingsGoal, 'id' | 'created_at'>) {
+  const { data, error } = await supabase.from('savings_goals').insert(g).select().single()
+  if (error) throw error
+  return data as SavingsGoal
+}
+export async function updateSavingsGoal(id: string, updates: Partial<SavingsGoal>) {
+  const { error } = await supabase.from('savings_goals').update(updates).eq('id', id)
+  if (error) throw error
+}
+export async function deleteSavingsGoal(id: string) {
+  const { error } = await supabase.from('savings_goals').delete().eq('id', id)
+  if (error) throw error
+}
+export async function getContributions(goalId: string): Promise<SavingsContribution[]> {
+  const { data } = await supabase.from('savings_contributions').select('*').eq('goal_id', goalId)
+    .order('contributed_at', { ascending: false }).order('created_at', { ascending: false })
+  return (data || []) as SavingsContribution[]
+}
+export async function deleteContribution(id: string) {
+  const { error } = await supabase.from('savings_contributions').delete().eq('id', id)
+  if (error) throw error
+}
+
+// Adds a contribution; if it funds the goal for the first time, marks achieved.
+// Returns { justAchieved } so the UI can celebrate + award XP.
+export async function addContribution(
+  c: Omit<SavingsContribution, 'id' | 'created_at'>,
+  goal: SavingsGoalStatus,
+): Promise<{ justAchieved: boolean }> {
+  const { error } = await supabase.from('savings_contributions').insert(c)
+  if (error) throw error
+  const newSaved = goal.saved + Number(c.amount)
+  const justAchieved = !goal.is_achieved && newSaved >= Number(goal.target_amount)
+  if (justAchieved) {
+    await supabase.from('savings_goals').update({ is_achieved: true }).eq('id', goal.id)
+  }
+  return { justAchieved }
 }
