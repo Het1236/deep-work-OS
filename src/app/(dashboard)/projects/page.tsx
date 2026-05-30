@@ -6,7 +6,7 @@ import { useUser } from '@/components/UserContext'
 import {
   getProjects, createProject, createTask, updateProjectStatus,
   updateProject, updateTaskStatus, deleteTask,
-  getTasks
+  getTasks, updateTask
 } from '@/lib/data'
 import type { Project, Task } from '@/lib/types'
 
@@ -48,6 +48,12 @@ export default function ProjectsPage() {
   const [newImpact, setNewImpact] = useState(5)
   const [newConfidence, setNewConfidence] = useState(5)
   const [newEase, setNewEase] = useState(5)
+
+  // Task detail editing states
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
+  const [taskStatus, setTaskStatus] = useState<'todo' | 'in_progress' | 'done'>('todo')
+  const [taskDrip, setTaskDrip] = useState<'producing' | 'investing' | 'recharging' | 'draining' | ''>('')
+  const [taskEnergy, setTaskEnergy] = useState<'high' | 'low' | ''>('')
 
   const today = todayStr()
 
@@ -126,6 +132,24 @@ export default function ProjectsPage() {
     loadData()
   }
 
+  async function handleSaveTaskDetails(taskId: string) {
+    if (taskStatus === 'in_progress' && !taskDrip) {
+      alert("DRIP Requirement: A DRIP category (Producing, Investing, Recharging, or Draining) is required before a task can be set to In Progress.")
+      return
+    }
+    try {
+      await updateTask(taskId, {
+        status: taskStatus,
+        drip_category: (taskDrip || null) as any,
+        energy_level: (taskEnergy || null) as any
+      })
+      setEditingTaskId(null)
+      loadData()
+    } catch (err: any) {
+      alert("Failed to save task details: " + (err?.message || err))
+    }
+  }
+
   async function handleAddDailyTask(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && dailyTaskInput.trim() && userId) {
       e.preventDefault()
@@ -144,6 +168,13 @@ export default function ProjectsPage() {
   async function handleAddProject(e: React.FormEvent) {
     e.preventDefault()
     if (!userId || !newTitle.trim()) return
+    if (newStatus === 'active') {
+      const activeCount = projects.filter(p => p.status === 'active').length
+      if (activeCount >= 3) {
+        alert("WIP Limit Reached: You can have at most 3 active projects at the same time. Move an active project to 'Done' or 'Upcoming' first.")
+        return
+      }
+    }
     await createProject({
       user_id: userId,
       title: newTitle.trim(),
@@ -175,6 +206,19 @@ export default function ProjectsPage() {
     e.preventDefault()
     const projectId = e.dataTransfer.getData('projectId')
     if (!projectId) return
+
+    // Check WIP limit if moving to active
+    if (status === 'active') {
+      const targetProj = projects.find(p => p.id === projectId)
+      if (targetProj && targetProj.status !== 'active') {
+        const activeCount = projects.filter(p => p.status === 'active').length
+        if (activeCount >= 3) {
+          alert("WIP Limit Reached: You can have at most 3 active projects at the same time. Move an active project to 'Done' or 'Upcoming' first.")
+          return
+        }
+      }
+    }
+
     setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: status as Project['status'] } : p))
     try {
       await updateProjectStatus(projectId, status)
@@ -353,10 +397,66 @@ export default function ProjectsPage() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)', marginBottom: 'var(--space-md)' }}>
                   {(selectedProject.tasks || []).map(task => (
-                    <div key={task.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-base)', padding: '6px 8px', borderRadius: '4px' }}>
-                      <input type="checkbox" checked={task.status === 'done'} onChange={() => handleToggleTask(task)} style={{ accentColor: 'var(--accent)', cursor: 'pointer' }} />
-                      <span style={{ fontSize: '0.8125rem', flex: 1, textDecoration: task.status === 'done' ? 'line-through' : 'none', color: task.status === 'done' ? 'var(--text-tertiary)' : 'var(--text-primary)' }}>{task.title}</span>
-                      <button className="btn btn-ghost" style={{ padding: '2px', color: 'var(--status-danger)' }} onClick={() => handleRemoveTask(task.id)}><X size={14} /></button>
+                    <div key={task.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'var(--bg-base)', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input type="checkbox" checked={task.status === 'done'} onChange={() => handleToggleTask(task)} style={{ accentColor: 'var(--accent)', cursor: 'pointer' }} />
+                        <span 
+                          style={{ fontSize: '0.8125rem', flex: 1, textDecoration: task.status === 'done' ? 'line-through' : 'none', color: task.status === 'done' ? 'var(--text-tertiary)' : 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}
+                          onClick={() => {
+                            setEditingTaskId(editingTaskId === task.id ? null : task.id)
+                            setTaskStatus(task.status)
+                            setTaskDrip(task.drip_category || '')
+                            setTaskEnergy(task.energy_level || '')
+                          }}
+                          title="Click to edit task details"
+                        >
+                          <span style={{ marginRight: '4px' }}>{task.title}</span>
+                          {task.status === 'in_progress' && <span className="badge badge-blue" style={{ fontSize: '0.625rem', padding: '1px 6px' }}>In Progress</span>}
+                          {task.drip_category && <span className={`badge drip-badge-${task.drip_category}`} style={{ fontSize: '0.625rem', padding: '1px 6px', opacity: 0.8 }}>{task.drip_category}</span>}
+                          {task.energy_level && <span className="badge" style={{ fontSize: '0.625rem', padding: '1px 6px', background: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)' }}>{task.energy_level}</span>}
+                        </span>
+                        <button className="btn btn-ghost" style={{ padding: '2px', color: 'var(--status-danger)' }} onClick={() => handleRemoveTask(task.id)}><X size={14} /></button>
+                      </div>
+                      
+                      {editingTaskId === task.id && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px', padding: '8px', background: 'var(--bg-hover)', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.03)' }} onClick={e => e.stopPropagation()}>
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <div style={{ flex: 1, minWidth: '100px' }}>
+                              <label style={{ fontSize: '0.6875rem', color: 'var(--text-tertiary)', display: 'block', marginBottom: '2px' }}>Status</label>
+                              <select className="sf-sel" style={{ padding: '4px 8px', fontSize: '0.75rem' }} value={taskStatus} onChange={e => setTaskStatus(e.target.value as any)}>
+                                <option value="todo">Todo</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="done">Done</option>
+                              </select>
+                            </div>
+                            
+                            <div style={{ flex: 1, minWidth: '100px' }}>
+                              <label style={{ fontSize: '0.6875rem', color: 'var(--text-tertiary)', display: 'block', marginBottom: '2px' }}>DRIP Category</label>
+                              <select className="sf-sel" style={{ padding: '4px 8px', fontSize: '0.75rem' }} value={taskDrip} onChange={e => setTaskDrip(e.target.value as any)}>
+                                <option value="">None</option>
+                                <option value="producing">Producing</option>
+                                <option value="investing">Investing</option>
+                                <option value="recharging">Recharging</option>
+                                <option value="draining">Draining</option>
+                              </select>
+                            </div>
+
+                            <div style={{ flex: 1, minWidth: '100px' }}>
+                              <label style={{ fontSize: '0.6875rem', color: 'var(--text-tertiary)', display: 'block', marginBottom: '2px' }}>Energy</label>
+                              <select className="sf-sel" style={{ padding: '4px 8px', fontSize: '0.75rem' }} value={taskEnergy} onChange={e => setTaskEnergy(e.target.value as any)}>
+                                <option value="">None</option>
+                                <option value="high">High</option>
+                                <option value="low">Low</option>
+                              </select>
+                            </div>
+                          </div>
+                          
+                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', marginTop: '4px' }}>
+                            <button className="btn btn-ghost btn-xs" style={{ padding: '2px 8px', fontSize: '0.6875rem' }} onClick={() => setEditingTaskId(null)}>Cancel</button>
+                            <button className="btn btn-primary btn-xs" style={{ padding: '2px 8px', fontSize: '0.6875rem' }} onClick={() => handleSaveTaskDetails(task.id)}>Save</button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                   {(selectedProject.tasks || []).length === 0 && <span style={{ fontSize: '0.8125rem', color: 'var(--text-tertiary)' }}>No tasks assigned.</span>}

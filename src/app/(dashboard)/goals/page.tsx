@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { useUser } from '@/components/UserContext'
 import {
   getGoals, createGoal, updateGoal, getProfile,
-  getProjects, getHabits, getHabitLogs,
+  getProjects, getHabits, getHabitLogs, upsertNote, getNotes, updateProfile,
 } from '@/lib/data'
 import type { Goal, Project, Habit, HabitLog } from '@/lib/types'
 import {
@@ -51,6 +51,13 @@ export default function GoalsPage() {
   const [showAll, setShowAll] = useState(false)
   const [menuOpen, setMenuOpen] = useState<string | null>(null)
 
+  // Vision & Anti-Vision board state
+  const [isEditingVision, setIsEditingVision] = useState(false)
+  const [coreValues, setCoreValues] = useState('')
+  const [antiVisionTraps, setAntiVisionTraps] = useState('')
+  const [futureIdentity, setFutureIdentity] = useState('')
+  const [archetype, setArchetype] = useState('')
+
   // Edit state
   const [editId, setEditId] = useState<string | null>(null)
   const [editProgress, setEditProgress] = useState(0)
@@ -71,12 +78,13 @@ export default function GoalsPage() {
     if (!userId) return
     setLoading(true)
     try {
-      const [g, profile, p, h, hl] = await Promise.all([
+      const [g, profile, p, h, hl, notes] = await Promise.all([
         getGoals(userId),
         getProfile(userId),
         getProjects(userId),
         getHabits(userId),
         getHabitLogs(userId, today, today),
+        getNotes(userId, 'blueprint'),
       ])
       setGoals(g)
       setVision(profile?.identity_statement || '')
@@ -84,9 +92,54 @@ export default function GoalsPage() {
       setProjects(p)
       setHabits(h)
       setHabitLogs(hl)
+
+      // Set Vision board fields
+      setFutureIdentity(profile?.identity_statement || '')
+      setArchetype(profile?.personality_type || '')
+
+      const profileNote = notes.find(n => n.title === 'Higher-Self Profile')
+      if (profileNote) {
+        try {
+          const parsed = JSON.parse(profileNote.content)
+          setCoreValues(parsed.coreValues || '')
+          setAntiVisionTraps(parsed.antiVisionTraps || '')
+        } catch {
+          setCoreValues('')
+          setAntiVisionTraps('')
+        }
+      }
     } catch (e: any) { console.error(e) }
     setLoading(false)
   }, [userId, today])
+
+  async function handleSaveVision() {
+    if (!userId) return
+    try {
+      // 1. Update profile
+      await updateProfile(userId, {
+        identity_statement: futureIdentity,
+        personality_type: archetype
+      })
+
+      // 2. Fetch existing note to get ID
+      const notes = await getNotes(userId, 'blueprint')
+      const profileNote = notes.find(n => n.title === 'Higher-Self Profile')
+
+      // 3. Upsert note
+      await upsertNote({
+        id: profileNote?.id,
+        user_id: userId,
+        title: 'Higher-Self Profile',
+        content: JSON.stringify({ coreValues, antiVisionTraps }),
+        note_type: 'blueprint'
+      })
+
+      setIsEditingVision(false)
+      load()
+    } catch (err: any) {
+      alert('Failed to save Vision Board: ' + (err?.message || err))
+    }
+  }
 
   useEffect(() => { load() }, [load])
 
@@ -171,6 +224,125 @@ export default function GoalsPage() {
         </div>
       </div>
 
+      {/* ═══ VISION & ANTI-VISION BOARD ═══ */}
+      <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 className="gp-sec-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Compass size={20} style={{ color: 'var(--accent)' }} /> Higher-Self Profile & Vision Board
+          </h2>
+          {!isEditingVision ? (
+            <button className="nav-today" onClick={() => setIsEditingVision(true)}>
+              Edit Vision Board
+            </button>
+          ) : (
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button className="sf-cancel" style={{ padding: '6px 12px', fontSize: '0.75rem' }} onClick={() => setIsEditingVision(false)}>
+                Cancel
+              </button>
+              <button className="sf-save" style={{ padding: '6px 16px', fontSize: '0.75rem', height: 'auto' }} onClick={handleSaveVision}>
+                Save Board
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-lg)' }}>
+          {/* Higher-Self / Vision Column */}
+          <div className="card" style={{ background: 'rgba(20,20,20,0.55)', borderLeft: '3px solid var(--accent)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <div style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.12em', marginBottom: '8px', fontFamily: 'var(--font-mono)' }}>
+                FUTURE IDENTITY
+              </div>
+              {isEditingVision ? (
+                <textarea 
+                  className="input" 
+                  rows={2} 
+                  value={futureIdentity} 
+                  onChange={e => setFutureIdentity(e.target.value)} 
+                  placeholder="I am a highly focused builder who creates systems that..."
+                  style={{ background: 'var(--bg-input)' }}
+                />
+              ) : (
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-primary)', lineHeight: 1.5, margin: 0 }}>
+                  {futureIdentity || 'Define who you are becoming in settings or edit mode.'}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <div style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.12em', marginBottom: '8px', fontFamily: 'var(--font-mono)' }}>
+                PERSONALITY TYPE / ARCHETYPE
+              </div>
+              {isEditingVision ? (
+                <input 
+                  className="input" 
+                  value={archetype} 
+                  onChange={e => setArchetype(e.target.value)} 
+                  placeholder="INTJ / Deep Thinker / Builder"
+                  style={{ background: 'var(--bg-input)' }}
+                />
+              ) : (
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-primary)', fontWeight: 600, margin: 0 }}>
+                  {archetype || 'Set your personality archetype.'}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <div style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.12em', marginBottom: '8px', fontFamily: 'var(--font-mono)' }}>
+                CORE VALUES & DRIVERS
+              </div>
+              {isEditingVision ? (
+                <textarea 
+                  className="input" 
+                  rows={3} 
+                  value={coreValues} 
+                  onChange={e => setCoreValues(e.target.value)} 
+                  placeholder="- Integrity: Doing perfect work even when no one watches.&#10;- Autonomy: Control over time and attention."
+                  style={{ background: 'var(--bg-input)' }}
+                />
+              ) : (
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: 1.5, margin: 0 }}>
+                  {coreValues || 'Add core values that guide your life decisions.'}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Anti-Vision Column */}
+          <div className="card" style={{ background: 'rgba(20,20,20,0.55)', borderLeft: '3px solid var(--status-danger)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <div style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--status-danger)', letterSpacing: '0.12em', marginBottom: '8px', fontFamily: 'var(--font-mono)' }}>
+                ANTI-VISION STATEMENT
+              </div>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-primary)', lineHeight: 1.5, margin: 0 }}>
+                Who I must NOT become: The passive consumer who reacts to distraction, lets their days drift, and fails to execute.
+              </p>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--status-danger)', letterSpacing: '0.12em', marginBottom: '8px', fontFamily: 'var(--font-mono)' }}>
+                TRAPS, TRIGGERS & DISTRACTIONS
+              </div>
+              {isEditingVision ? (
+                <textarea 
+                  className="input" 
+                  rows={6} 
+                  value={antiVisionTraps} 
+                  onChange={e => setAntiVisionTraps(e.target.value)} 
+                  placeholder="- Phone checking immediately after waking up.&#10;- Saying yes to low-leverage obligations.&#10;- Letting inbox dictate the daily schedule."
+                  style={{ background: 'var(--bg-input)' }}
+                />
+              ) : (
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: 1.5, margin: 0 }}>
+                  {antiVisionTraps || 'List the traps, triggers, and bad habits that derail your progress.'}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* ═══ ACTIVE TRAJECTORIES ═══ */}
       <div className="gp-sec-hdr animate-fade-in">
         <div>
@@ -241,6 +413,14 @@ export default function GoalsPage() {
                 <h3 className="gp-card-title">{goal.title}</h3>
                 {goal.problem && <p className="gp-card-desc">{goal.problem}</p>}
                 {!goal.problem && goal.solution && <p className="gp-card-desc">{goal.solution}</p>}
+                {goal.ai_solution && (
+                  <div style={{ marginTop: '4px', marginBottom: '12px', padding: '10px 14px', background: 'rgba(150, 250, 194, 0.05)', border: '1px solid rgba(150, 250, 194, 0.15)', borderRadius: '8px' }}>
+                    <div style={{ fontSize: '0.6875rem', color: 'var(--accent)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                      <Sparkles size={11} /> AI Strategy & Recommendation
+                    </div>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4, margin: 0 }}>{goal.ai_solution}</p>
+                  </div>
+                )}
                 {goal.life_area && <div className="gp-card-area">📍 {goal.life_area}</div>}
 
                 {isEditing ? (

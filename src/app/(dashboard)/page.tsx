@@ -5,14 +5,26 @@ import { useUser } from '@/components/UserContext'
 import {
   getDashboardStats, getHabits, getHabitLogs, toggleHabitLog,
   getGoals, createSession, endSession as endSessionApi, discardSession,
-  getActiveTasks, updateTaskStatus,
+  getActiveTasks, updateTaskStatus, getPlannerBlocks,
 } from '@/lib/data'
-import type { DashboardStats, Habit, HabitLog, Goal, Task } from '@/lib/types'
+import type { DashboardStats, Habit, HabitLog, Goal, Task, PlannerBlock } from '@/lib/types'
 import {
   Play, Pause, Square, Zap,
-  Loader2, Shield, ArrowRight, Coffee, Brain, SkipForward, Trash2, Clock,
+  Loader2, Shield, ArrowRight, Coffee, Brain, SkipForward, Trash2, Clock, Sparkles
 } from 'lucide-react'
 import { useTimerStore } from '@/stores/timerStore'
+
+const DEEP_WORK_QUOTES = [
+  { text: "Who you are, what you think, what you do, what you love—this is what your life is made of.", author: "Cal Newport" },
+  { text: "Deep work is not some nostalgic affectation... It is instead an indispensable skill.", author: "Cal Newport" },
+  { text: "Concentrate all your thoughts upon the work at hand. The sun's rays do not burn until brought to a focus.", author: "Alexander Graham Bell" },
+  { text: "Only one who devotes himself to a cause with his whole strength and soul can be a true master.", author: "Albert Einstein" },
+  { text: "He who is everywhere is nowhere.", author: "Seneca" },
+  { text: "The key to productivity is to rotate your mind through different styles of focus.", author: "Cal Newport" },
+  { text: "Great things are done by a series of small things brought together.", author: "Vincent Van Gogh" },
+  { text: "Your goal is not to do more, but to have more of what you do matter.", author: "Cal Newport" },
+  { text: "Solitude is the school of genius.", author: "Edward Gibbon" }
+]
 
 export default function DashboardPage() {
   const { userId, lastUpdate, triggerRefresh } = useUser()
@@ -30,12 +42,13 @@ export default function DashboardPage() {
   const [habits, setHabits] = useState<Habit[]>([])
   const [logs, setLogs] = useState<HabitLog[]>([])
   const [goals, setGoals] = useState<Goal[]>([])
+  const [activeTasks, setActiveTasks] = useState<Task[]>([])
+  const [plannerBlocks, setPlannerBlocks] = useState<PlannerBlock[]>([])
   const [loading, setLoading] = useState(true)
   const [intensity, setIntensity] = useState(10)
   const [saving, setSaving] = useState(false)
   const [isWrapUpOpen, setIsWrapUpOpen] = useState(false)
   const [notes, setNotes] = useState('')
-  const [activeTasks, setActiveTasks] = useState<Task[]>([])
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set())
   const [deepWorkPct, setDeepWorkPct] = useState(100)
   const [durationOverride, setDurationOverride] = useState<number | null>(null)
@@ -56,13 +69,15 @@ export default function DashboardPage() {
   const loadData = useCallback(async () => {
     if (!userId) return
     setLoading(true)
-    const [s, h, l, g] = await Promise.all([
+    const [s, h, l, g, tasks, blocks] = await Promise.all([
       getDashboardStats(userId),
       getHabits(userId),
       getHabitLogs(userId, thirtyAgo, today),
       getGoals(userId),
+      getActiveTasks(userId),
+      getPlannerBlocks(userId, today),
     ])
-    setStats(s); setHabits(h); setLogs(l); setGoals(g)
+    setStats(s); setHabits(h); setLogs(l); setGoals(g); setActiveTasks(tasks); setPlannerBlocks(blocks)
     setLoading(false)
   }, [userId, today, thirtyAgo, lastUpdate])
 
@@ -92,6 +107,18 @@ export default function DashboardPage() {
 
   /* Intensity mode */
   const iMode = intensity >= 8 ? 'deep' : intensity >= 5 ? 'flow' : 'lite'
+
+  /* Pinned WIGs & Daily Quote & Today's Agenda */
+  const pinnedWigs = goals.filter(g => g.is_wig).slice(0, 3)
+  const dayOfYear = new Date().getDate()
+  const quote = DEEP_WORK_QUOTES[dayOfYear % DEEP_WORK_QUOTES.length]
+  const todayTasks = activeTasks.filter(t => t.scheduled_date === today)
+
+  const formatSlot = (slot: number) => {
+    const hrs = Math.floor(slot / 2)
+    const mins = (slot % 2) * 30
+    return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}`
+  }
 
   /* ---- Actions ---- */
   async function handleStart() {
@@ -191,6 +218,16 @@ export default function DashboardPage() {
           <div className="fd-sid text-mono">Session ID: {sessionId ? sessionId.slice(0, 7).toUpperCase() : '---'}</div>
           <div className="fd-sync">Last Synced: just now</div>
         </div>
+      </div>
+
+      {/* ════════════════ DAILY QUOTE ════════════════ */}
+      <div className="fd-quote card animate-fade-in" style={{ animationDelay: '0.03s', padding: '16px 24px', textAlign: 'center', background: 'rgba(255,255,255,0.01)', borderStyle: 'dashed', borderColor: 'var(--border-subtle)' }}>
+        <p style={{ fontStyle: 'italic', fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+          &ldquo;{quote.text}&rdquo;
+        </p>
+        <span style={{ fontSize: '0.75rem', color: 'var(--accent)', marginTop: '4px', display: 'block', fontWeight: 600 }}>
+          — {quote.author}
+        </span>
       </div>
 
       {/* ════════════════ TIMER + INTENSITY ════════════════ */}
@@ -301,9 +338,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ════════════════ BOTTOM ROW ════════════════ */}
+      {/* ════════════════ BOTTOM COMMAND SECTION ════════════════ */}
       <div className="fd-row3 animate-fade-in" style={{ animationDelay: '0.18s' }}>
-        {/* Habits Widget */}
+        {/* Column 1: Habits Widget */}
         <div className="fd-evo-card">
           <div className="fd-evo-hdr">
             <h3 className="fd-sec-title">TODAY&apos;S HABITS</h3>
@@ -314,7 +351,6 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Habit progress bar */}
           <div style={{ marginBottom: 'var(--space-lg)' }}>
             <div className="fd-progress-bar" style={{ height: '6px' }}>
               <div className="fd-progress-fill" style={{ width: `${habitPct}%`, transition: 'width 0.4s ease' }} />
@@ -323,11 +359,10 @@ export default function DashboardPage() {
               <span className="text-mono" style={{ fontSize: '0.5625rem', color: 'var(--text-tertiary)', letterSpacing: '0.08em' }}>
                 {habitPct >= 100 ? 'ALL HABITS COMPLETE' : habitPct >= 80 ? 'ALMOST THERE' : habitPct >= 50 ? 'GOOD MOMENTUM' : 'KEEP GOING'}
               </span>
-              <span className="text-mono" style={{ fontSize: '0.5625rem', color: 'var(--accent)', letterSpacing: '0.08em' }}>{habitPct}%</span>
+              <span className="text-mono" style={{ fontSize: '0.5625rem', color: 'var(--accent)', letterSpacing: '0.08em', float: 'right' }}>{habitPct}%</span>
             </div>
           </div>
 
-          {/* Habit list */}
           {habits.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
               {habits.map(habit => {
@@ -356,27 +391,75 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Environmental Insight */}
-        <div className="fd-env-card">
-          <h3 className="fd-sec-title">ENVIRONMENTAL INSIGHT</h3>
-          <div className="fd-env-badge">
-            <Shield size={16} style={{ color: 'var(--accent)' }} />
-            <span>Distraction Shield: <strong style={{ color: 'var(--accent)' }}>ACTIVE</strong></span>
+        {/* Column 2: Today's Agenda */}
+        <div className="fd-agenda-card">
+          <h3 className="fd-sec-title">TODAY&apos;S AGENDA</h3>
+          {plannerBlocks.length > 0 || todayTasks.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {plannerBlocks.map(block => (
+                <div key={block.id} className="agenda-item">
+                  <span className="agenda-time text-mono">{formatSlot(block.start_slot)} - {formatSlot(block.end_slot)}</span>
+                  <div className="agenda-content">
+                    <span className="agenda-title">{block.title}</span>
+                    <span className="agenda-tag text-mono">{block.block_type.replace('_', ' ').toUpperCase()}</span>
+                  </div>
+                </div>
+              ))}
+              {todayTasks.filter(t => !plannerBlocks.some(pb => pb.task_id === t.id)).map(task => (
+                <div key={task.id} className="agenda-item">
+                  <span className="agenda-time text-mono">TASK</span>
+                  <div className="agenda-content">
+                    <span className="agenda-title">{task.title}</span>
+                    <span className="agenda-tag text-mono" style={{ color: 'var(--accent)' }}>TODO</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="fd-empty">No planner blocks or tasks scheduled for today. <a href="/planner" style={{ color: 'var(--accent)' }}>Open Planner →</a></div>
+          )}
+        </div>
+
+        {/* Column 3: Pinned WIGs & Environmental Insight */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
+          <div className="fd-wigs-card">
+            <h3 className="fd-sec-title">PINNED WIGS</h3>
+            {pinnedWigs.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {pinnedWigs.map(wig => (
+                  <div key={wig.id} style={{ padding: '10px', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>{wig.title}</span>
+                      <span className="text-mono" style={{ fontSize: '0.75rem', color: 'var(--accent)' }}>{wig.progress_pct}%</span>
+                    </div>
+                    <div className="fd-progress-bar" style={{ height: '4px' }}>
+                      <div className="fd-progress-fill" style={{ width: `${wig.progress_pct}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="fd-empty">No active WIGs pinned. <a href="/goals" style={{ color: 'var(--accent)' }}>Open Goals →</a></div>
+            )}
           </div>
-          <p className="fd-env-text">
-            {completedH > 0
-              ? `System has tracked ${completedH} of ${totalH} habits completed today (${habitPct}%).`
-              : `${totalH} habits configured for tracking today.`
-            }
-            {habitPct >= 80
-              ? ' Focus remains unbroken.'
-              : habitPct >= 50
-                ? ' Good momentum building.'
-                : ' Establishing consistency.'}
-          </p>
-          <a href="/habits" className="fd-env-link text-mono">
-            VIEW FULL SECURITY LOG <ArrowRight size={12} />
-          </a>
+
+          <div className="fd-env-card-inner">
+            <h3 className="fd-sec-title">ENVIRONMENTAL INSIGHT</h3>
+            <div className="fd-env-badge">
+              <Shield size={16} style={{ color: 'var(--accent)' }} />
+              <span>Distraction Shield: <strong style={{ color: 'var(--accent)' }}>ACTIVE</strong></span>
+            </div>
+            <p className="fd-env-text">
+              {completedH > 0
+                ? `System has tracked ${completedH} of ${totalH} habits completed today (${habitPct}%).`
+                : `${totalH} habits configured for tracking today.`
+              }
+              {habitPct >= 80 ? ' Focus remains unbroken.' : ' Establish consistency.'}
+            </p>
+            <a href="/habits" className="fd-env-link text-mono">
+              VIEW FULL SECURITY LOG <ArrowRight size={12} />
+            </a>
+          </div>
         </div>
       </div>
 
@@ -645,9 +728,10 @@ export default function DashboardPage() {
         }
         .fd-bar-last { background: var(--accent) !important; }
 
-        /* ---- Row 3: Bottom ---- */
-        .fd-row3 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg); }
-        .fd-evo-card, .fd-env-card {
+        /* ---- Row 3: Bottom Command Center Grid ---- */
+        .fd-row3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-lg); }
+        
+        .fd-evo-card, .fd-agenda-card, .fd-wigs-card, .fd-env-card-inner {
           background: rgba(20, 20, 20, 0.6);
           backdrop-filter: blur(16px);
           -webkit-backdrop-filter: blur(16px);
@@ -689,6 +773,14 @@ export default function DashboardPage() {
         }
         .fd-empty { color: var(--text-tertiary); font-size: 0.8125rem; padding: 12px 0; }
 
+        /* Agenda Widget */
+        .agenda-item { display: flex; gap: var(--space-md); padding: 10px 0; border-bottom: 1px solid var(--border-subtle); align-items: center; }
+        .agenda-item:last-child { border-bottom: none; }
+        .agenda-time { font-size: 0.75rem; color: var(--accent); min-width: 85px; }
+        .agenda-content { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+        .agenda-title { font-size: 0.8125rem; font-weight: 500; color: var(--text-primary); }
+        .agenda-tag { font-size: 0.5625rem; color: var(--text-tertiary); letter-spacing: 0.08em; }
+
         /* Environmental Insight */
         .fd-env-badge {
           display: flex; align-items: center; gap: 10px;
@@ -697,7 +789,7 @@ export default function DashboardPage() {
         }
         .fd-env-text {
           font-size: 0.8125rem; color: var(--text-secondary);
-          line-height: 1.65; margin-bottom: var(--space-xl);
+          line-height: 1.65; margin-bottom: var(--space-md);
         }
         .fd-env-link {
           display: inline-flex; align-items: center; gap: 6px;

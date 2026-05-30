@@ -17,6 +17,17 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
+  // Check if onboarding is completed
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('identity_statement')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || !profile.identity_statement) {
+    redirect('/onboarding')
+  }
+
   return (
     <UserProvider initialUser={user}>
       <DashboardProviders>

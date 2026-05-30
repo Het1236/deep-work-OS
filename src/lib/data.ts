@@ -2,8 +2,12 @@ import { createClient } from '@/lib/supabase/client'
 import type {
   Profile, DeepWorkSession, Habit, HabitLog,
   Goal, Project, Task, JournalEntry, TimeBlock,
-  Achievement, XPEvent, DashboardStats, Group, Note, PlannerBlock, ScoreboardData
+  Achievement, XPEvent, DashboardStats, Group, Note, PlannerBlock, ScoreboardData,
+  FinanceAccount, FinanceCategory, Transaction, BudgetOverview, CategorySpend, DailySpend,
+  CategoryBudgetStatus, SavingsGoal, SavingsContribution, SavingsGoalStatus,
+  RecurringRule, MonthlyTrend,
 } from '@/lib/types'
+import { monthRange, accountBalance, daysUntil, addPeriod, monthKey, shiftMonth } from '@/lib/finance'
 
 const supabase = createClient()
 
@@ -471,6 +475,17 @@ export async function updateTaskStatus(taskId: string, status: string) {
   if (error) throw error
 }
 
+export async function updateTask(taskId: string, updates: Partial<Task>) {
+  const { data, error } = await supabase
+    .from('tasks')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', taskId)
+    .select()
+    .single()
+  if (error) throw error
+  return data as Task
+}
+
 export async function deleteTask(taskId: string) {
   const { error } = await supabase
     .from('tasks')
@@ -709,9 +724,11 @@ export async function getGroupWeeklyStats(memberIds: string[]) {
 
 // ─── Utility: XP Level Calculation ────────────
 export function calculateLevel(xpTotal: number) {
-  const level = Math.floor(xpTotal / 1000) + 1
-  const xpInLevel = xpTotal % 1000
-  const xpForNext = 1000
+  const level = Math.max(1, Math.floor(Math.sqrt(xpTotal / 100)))
+  const xpStartCurrent = level === 1 ? 0 : level * level * 100
+  const xpStartNext = (level + 1) * (level + 1) * 100
+  const xpInLevel = xpTotal - xpStartCurrent
+  const xpForNext = xpStartNext - xpStartCurrent
   const progress = (xpInLevel / xpForNext) * 100
   return { level, xpInLevel, xpForNext, progress }
 }
@@ -722,12 +739,16 @@ export type XPAction =
   | 'habit_complete'     // +5 XP per habit checked
   | 'shutdown_ritual'    // +15 XP for completing shutdown
   | 'journal_entry'      // +10 XP per journal entry
+  | 'finance_log'        // +3 XP for first transaction logged that day
+  | 'savings_funded'     // +20 XP when a savings goal is fully funded
 
 const XP_VALUES: Record<XPAction, number> = {
   session_complete: 10,
   habit_complete: 5,
   shutdown_ritual: 15,
   journal_entry: 10,
+  finance_log: 3,
+  savings_funded: 20,
 }
 
 export async function awardXP(
@@ -762,70 +783,217 @@ export async function awardXP(
   return { xpAwarded: xp, newTotal, leveledUp: newLevel > oldLevel }
 }
 
-// Badge definitions with check logic
-type BadgeCheck = {
-  key: string
-  check: (ctx: BadgeContext) => boolean
-}
-
-type BadgeContext = {
-  totalHours: number
-  streakCurrent: number
-  sessionCount: number
-  shutdownCount: number
-  achievements: Achievement[]
-}
-
-const BADGE_CHECKS: BadgeCheck[] = [
-  { key: 'first_session', check: (ctx) => ctx.sessionCount >= 1 },
-  { key: 'week_warrior', check: (ctx) => ctx.streakCurrent >= 7 },
-  { key: 'habit_streak_7', check: (ctx) => ctx.streakCurrent >= 7 },
-  { key: '100_hours', check: (ctx) => ctx.totalHours >= 100 },
-  { key: 'shutdown_30', check: (ctx) => ctx.shutdownCount >= 30 },
-]
-
 export async function checkAndAwardBadges(userId: string): Promise<string[]> {
-  // Gather context
-  const [profile, achievements] = await Promise.all([
-    getProfile(userId),
-    getAchievements(userId),
-  ])
-
-  // Count total session hours
-  const { data: sessions } = await supabase
+  // 1. Recalculate deep work session streak
+  const { data: allSessions } = await supabase
     .from('deep_work_sessions')
-    .select('duration_minutes')
+    .select('session_date, duration_minutes, quality_score')
     .eq('user_id', userId)
-    .not('duration_minutes', 'is', null)
-  const totalHours = (sessions || []).reduce((s, r) => s + ((r.duration_minutes || 0) / 60), 0)
+    .order('session_date', { ascending: true })
 
-  // Count shutdown rituals (journal entries with shutdown_done)
+  // Compute unique session dates
+  const sessionDates = Array.from(new Set((allSessions || []).map(s => s.session_date))).filter(Boolean) as string[]
+  
+  // Calculate deep work streaks
+  let dwStreakCurrent = 0
+  let dwStreakMax = 0
+  if (sessionDates.length > 0) {
+    const todayStr = new Date().toISOString().split('T')[0]
+    const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+    
+    // Sort dates
+    sessionDates.sort()
+    
+    // Calculate dwStreakMax
+    let currentRun = 0
+    let lastDate: Date | null = null
+    for (const dStr of sessionDates) {
+      const currentDate = new Date(dStr)
+      if (lastDate) {
+        const diffTime = Math.abs(currentDate.getTime() - lastDate.getTime())
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        if (diffDays === 1) {
+          currentRun++
+        } else if (diffDays > 1) {
+          dwStreakMax = Math.max(dwStreakMax, currentRun)
+          currentRun = 1
+        }
+      } else {
+        currentRun = 1
+      }
+      lastDate = currentDate
+    }
+    dwStreakMax = Math.max(dwStreakMax, currentRun)
+    
+    // Calculate dwStreakCurrent
+    const lastSessionDateStr = sessionDates[sessionDates.length - 1]
+    if (lastSessionDateStr === todayStr || lastSessionDateStr === yesterdayStr) {
+      let currentRunBack = 0
+      let expectedDate = new Date(lastSessionDateStr)
+      const sessionDatesSet = new Set(sessionDates)
+      while (sessionDatesSet.has(expectedDate.toISOString().split('T')[0])) {
+        currentRunBack++
+        expectedDate.setDate(expectedDate.getDate() - 1)
+      }
+      dwStreakCurrent = currentRunBack
+    } else {
+      dwStreakCurrent = 0
+    }
+  }
+
+  // Update profile with recalculated deep work streaks
+  const { data: currentProfile } = await supabase
+    .from('profiles')
+    .select('streak_max')
+    .eq('id', userId)
+    .single()
+  const newStreakMax = Math.max(currentProfile?.streak_max || 0, dwStreakMax)
+  await supabase
+    .from('profiles')
+    .update({
+      streak_current: dwStreakCurrent,
+      streak_max: newStreakMax,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', userId)
+
+  // 2. Recalculate habit completion streak
+  const { data: allHabitLogs } = await supabase
+    .from('habit_logs')
+    .select('habit_id, log_date, completed')
+    .eq('user_id', userId)
+    .eq('completed', true)
+    .order('log_date', { ascending: true })
+
+  // Group by habit_id
+  const habitLogsMap: Record<string, string[]> = {}
+  for (const log of (allHabitLogs || [])) {
+    if (!habitLogsMap[log.habit_id]) {
+      habitLogsMap[log.habit_id] = []
+    }
+    habitLogsMap[log.habit_id].push(log.log_date)
+  }
+
+  let maxHabitStreak = 0
+  for (const habitId in habitLogsMap) {
+    const dates = Array.from(new Set(habitLogsMap[habitId])).sort()
+    if (dates.length > 0) {
+      let currentRun = 0
+      let lastDate: Date | null = null
+      let habitStreakMax = 0
+      for (const dStr of dates) {
+        const currentDate = new Date(dStr)
+        if (lastDate) {
+          const diffTime = Math.abs(currentDate.getTime() - lastDate.getTime())
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+          if (diffDays === 1) {
+            currentRun++
+          } else if (diffDays > 1) {
+            habitStreakMax = Math.max(habitStreakMax, currentRun)
+            currentRun = 1
+          }
+        } else {
+          currentRun = 1
+        }
+        lastDate = currentDate
+      }
+      habitStreakMax = Math.max(habitStreakMax, currentRun)
+      maxHabitStreak = Math.max(maxHabitStreak, habitStreakMax)
+    }
+  }
+
+  // 3. Count total session hours
+  const totalHours = (allSessions || []).reduce((s, r) => s + ((r.duration_minutes || 0) / 60), 0)
+
+  // 4. Count shutdown rituals (journal entries with shutdown_done)
   const { count: shutdownCount } = await supabase
     .from('journal_entries')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
     .eq('shutdown_done', true)
 
-  const ctx: BadgeContext = {
-    totalHours,
-    streakCurrent: profile?.streak_current || 0,
-    sessionCount: (sessions || []).length,
-    shutdownCount: shutdownCount || 0,
-    achievements,
+  // 5. Max quality score
+  const maxQualityScore = (allSessions || []).reduce((max, s) => {
+    const q = Number(s.quality_score) || 0
+    return q > max ? q : max
+  }, 0)
+
+  // 6. Perfect week check
+  let hasPerfectWeek = false
+  if (totalHours >= 25) {
+    const { count: totalActiveHabits } = await supabase
+      .from('habits')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_active', true)
+    
+    if (totalActiveHabits && totalActiveHabits > 0) {
+      const weeklyHours: Record<string, number> = {}
+      const weeklyHabitCompletions: Record<string, Set<string>> = {}
+      
+      const getWeekKey = (dateStr: string) => {
+        const d = new Date(dateStr)
+        const day = d.getDay()
+        const sun = new Date(d)
+        sun.setDate(d.getDate() - day)
+        return sun.toISOString().split('T')[0]
+      }
+
+      for (const s of (allSessions || [])) {
+        if (!s.session_date) continue
+        const wk = getWeekKey(s.session_date)
+        weeklyHours[wk] = (weeklyHours[wk] || 0) + ((s.duration_minutes || 0) / 60)
+      }
+
+      const { data: allLogs } = await supabase
+        .from('habit_logs')
+        .select('habit_id, log_date, completed')
+        .eq('user_id', userId)
+      
+      for (const log of (allLogs || [])) {
+        if (!log.completed) continue
+        const wk = getWeekKey(log.log_date)
+        if (!weeklyHabitCompletions[wk]) {
+          weeklyHabitCompletions[wk] = new Set()
+        }
+        weeklyHabitCompletions[wk].add(`${log.habit_id}_${log.log_date}`)
+      }
+
+      for (const wk in weeklyHours) {
+        if (weeklyHours[wk] >= 25) {
+          const expectedCompletions = totalActiveHabits * 7
+          const completedCount = weeklyHabitCompletions[wk]?.size || 0
+          if (completedCount >= expectedCompletions) {
+            hasPerfectWeek = true
+            break
+          }
+        }
+      }
+    }
   }
 
+  // 7. Get already earned achievements
+  const achievements = await getAchievements(userId)
   const earnedKeys = new Set(achievements.map(a => a.badge_key))
   const newBadges: string[] = []
 
-  for (const badge of BADGE_CHECKS) {
-    if (!earnedKeys.has(badge.key) && badge.check(ctx)) {
+  const checkBadge = async (key: string, condition: boolean) => {
+    if (!earnedKeys.has(key) && condition) {
       await supabase.from('achievements').insert({
         user_id: userId,
-        badge_key: badge.key,
+        badge_key: key,
       })
-      newBadges.push(badge.key)
+      newBadges.push(key)
     }
   }
+
+  await checkBadge('first_session', (allSessions || []).length >= 1)
+  await checkBadge('week_warrior', dwStreakCurrent >= 7)
+  await checkBadge('habit_streak_7', maxHabitStreak >= 7)
+  await checkBadge('100_hours', totalHours >= 100)
+  await checkBadge('shutdown_30', (shutdownCount || 0) >= 30)
+  await checkBadge('quality_8', maxQualityScore >= 8)
+  await checkBadge('perfect_week', hasPerfectWeek)
 
   return newBadges
 }
@@ -903,4 +1071,323 @@ export async function mergePlannerBlocks(keepId: string, removeId: string, newEn
     .delete()
     .eq('id', removeId)
   if (delErr) throw delErr
+}
+
+// ═══════════════════════════════════════════════
+// Finance / Budget Tracker
+// ═══════════════════════════════════════════════
+
+// ─── Finance: Accounts (wallets) ──────────────
+export async function getAccounts(userId: string): Promise<FinanceAccount[]> {
+  const { data } = await supabase.from('finance_accounts')
+    .select('*').eq('user_id', userId).eq('is_active', true)
+    .order('sort_order').order('created_at')
+  return (data || []) as FinanceAccount[]
+}
+export async function createAccount(a: Omit<FinanceAccount, 'id' | 'created_at'>) {
+  const { data, error } = await supabase.from('finance_accounts').insert(a).select().single()
+  if (error) throw error
+  return data as FinanceAccount
+}
+export async function updateAccount(id: string, updates: Partial<FinanceAccount>) {
+  const { error } = await supabase.from('finance_accounts').update(updates).eq('id', id)
+  if (error) throw error
+}
+export async function deleteAccount(id: string) {
+  const { error } = await supabase.from('finance_accounts').update({ is_active: false }).eq('id', id)
+  if (error) throw error
+}
+
+// ─── Finance: Categories ──────────────────────
+export async function getCategories(userId: string): Promise<FinanceCategory[]> {
+  const { data } = await supabase.from('finance_categories')
+    .select('*').eq('user_id', userId).eq('is_archived', false)
+    .order('sort_order').order('created_at')
+  return (data || []) as FinanceCategory[]
+}
+export async function createCategory(c: Omit<FinanceCategory, 'id' | 'created_at'>) {
+  const { data, error } = await supabase.from('finance_categories').insert(c).select().single()
+  if (error) throw error
+  return data as FinanceCategory
+}
+export async function updateCategory(id: string, updates: Partial<FinanceCategory>) {
+  const { error } = await supabase.from('finance_categories').update(updates).eq('id', id)
+  if (error) throw error
+}
+export async function deleteCategory(id: string) {
+  const { error } = await supabase.from('finance_categories').update({ is_archived: true }).eq('id', id)
+  if (error) throw error
+}
+
+// Seed default student categories + wallets if user has none. Idempotent.
+export async function seedFinanceDefaults(userId: string): Promise<void> {
+  const existing = await getCategories(userId)
+  if (existing.length === 0) {
+    const expense: [string, string][] = [
+      ['Food & Dining', '#E85D5D'], ['Travel', '#5B9BD5'], ['Groceries', '#4CAF7D'],
+      ['Rent/Hostel', '#F5A623'], ['Mobile/Internet', '#9B7EDE'], ['Education', '#50b380'],
+      ['Entertainment', '#E89B5D'], ['Shopping', '#E85D9B'], ['Health', '#5DC9E8'], ['Misc', '#888888'],
+    ]
+    const income: [string, string][] = [
+      ['Allowance', '#96fac2'], ['Freelance', '#5B9BD5'], ['Gifts', '#F5A623'], ['Other', '#888888'],
+    ]
+    const rows = [
+      ...expense.map(([name, color], i) => ({ user_id: userId, name, kind: 'expense', color, sort_order: i, is_archived: false, monthly_budget: null, icon: null })),
+      ...income.map(([name, color], i) => ({ user_id: userId, name, kind: 'income', color, sort_order: i, is_archived: false, monthly_budget: null, icon: null })),
+    ]
+    await supabase.from('finance_categories').insert(rows)
+  }
+  const accts = await getAccounts(userId)
+  if (accts.length === 0) {
+    await supabase.from('finance_accounts').insert([
+      { user_id: userId, name: 'Cash', type: 'cash', opening_balance: 0, color: '#96fac2', sort_order: 0, is_active: true, icon: null },
+      { user_id: userId, name: 'UPI', type: 'upi', opening_balance: 0, color: '#5B9BD5', sort_order: 1, is_active: true, icon: null },
+      { user_id: userId, name: 'Bank', type: 'bank', opening_balance: 0, color: '#F5A623', sort_order: 2, is_active: true, icon: null },
+    ])
+  }
+}
+
+// ─── Finance: Transactions ────────────────────
+export async function getTransactions(userId: string, opts?: {
+  start?: string; end?: string; type?: 'income' | 'expense' | 'transfer'; categoryId?: string; limit?: number
+}): Promise<Transaction[]> {
+  let q = supabase.from('transactions').select('*').eq('user_id', userId)
+  if (opts?.start) q = q.gte('txn_date', opts.start)
+  if (opts?.end) q = q.lte('txn_date', opts.end)
+  if (opts?.type) q = q.eq('type', opts.type)
+  if (opts?.categoryId) q = q.eq('category_id', opts.categoryId)
+  q = q.order('txn_date', { ascending: false }).order('created_at', { ascending: false })
+  if (opts?.limit) q = q.limit(opts.limit)
+  const { data } = await q
+  return (data || []) as Transaction[]
+}
+export async function createTransaction(t: Omit<Transaction, 'id' | 'created_at'>) {
+  const { data, error } = await supabase.from('transactions').insert(t).select().single()
+  if (error) throw error
+  return data as Transaction
+}
+export async function updateTransaction(id: string, updates: Partial<Transaction>) {
+  const { error } = await supabase.from('transactions').update(updates).eq('id', id)
+  if (error) throw error
+}
+export async function deleteTransaction(id: string) {
+  const { error } = await supabase.from('transactions').delete().eq('id', id)
+  if (error) throw error
+}
+
+// Returns true if no transaction exists yet for today's date (drives once-per-day XP).
+export async function isFirstLogToday(userId: string): Promise<boolean> {
+  const today = new Date().toISOString().split('T')[0]
+  const { count } = await supabase.from('transactions')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId).eq('txn_date', today)
+  return (count || 0) === 0
+}
+
+// ─── Finance: Overview aggregation ────────────
+export async function getBudgetOverview(userId: string, ref: Date = new Date()): Promise<BudgetOverview> {
+  const { start, end } = monthRange(ref)
+  const [accounts, categories, allTxns, monthTxns] = await Promise.all([
+    getAccounts(userId),
+    getCategories(userId),
+    getTransactions(userId),                       // all-time, for true balances
+    getTransactions(userId, { start, end }),       // this month, for stats
+  ])
+
+  const accountsWithBal = accounts.map(a => ({ ...a, balance: accountBalance(a, allTxns) }))
+  const totalBalance = accountsWithBal.reduce((s, a) => s + a.balance, 0)
+
+  let monthIncome = 0, monthExpense = 0
+  for (const t of monthTxns) {
+    if (t.type === 'income') monthIncome += Number(t.amount)
+    else if (t.type === 'expense') monthExpense += Number(t.amount)
+  }
+
+  const catMap = new Map(categories.map(c => [c.id, c]))
+  const spendByCat = new Map<string, number>()
+  for (const t of monthTxns) {
+    if (t.type !== 'expense' || !t.category_id) continue
+    spendByCat.set(t.category_id, (spendByCat.get(t.category_id) || 0) + Number(t.amount))
+  }
+  const categorySpend: CategorySpend[] = [...spendByCat.entries()].map(([id, total]) => ({
+    categoryId: id, name: catMap.get(id)?.name || 'Uncategorized',
+    color: catMap.get(id)?.color || '#888888', total,
+  })).sort((a, b) => b.total - a.total)
+
+  const dayMap = new Map<string, DailySpend>()
+  for (const t of monthTxns) {
+    const d = dayMap.get(t.txn_date) || { date: t.txn_date, income: 0, expense: 0 }
+    if (t.type === 'income') d.income += Number(t.amount)
+    else if (t.type === 'expense') d.expense += Number(t.amount)
+    dayMap.set(t.txn_date, d)
+  }
+  const dailySeries = [...dayMap.values()].sort((a, b) => a.date.localeCompare(b.date))
+
+  return {
+    totalBalance, monthIncome, monthExpense, monthNet: monthIncome - monthExpense,
+    accounts: accountsWithBal, categorySpend, dailySeries,
+    recentTransactions: monthTxns.slice(0, 8),
+  }
+}
+
+// Per-expense-category budget vs actual for the month. Used by the Budgets tab.
+export async function getBudgetStatus(userId: string, ref: Date = new Date()): Promise<CategoryBudgetStatus[]> {
+  const { start, end } = monthRange(ref)
+  const [categories, monthTxns] = await Promise.all([
+    getCategories(userId),
+    getTransactions(userId, { start, end, type: 'expense' }),
+  ])
+  const spend = new Map<string, number>()
+  for (const t of monthTxns) {
+    if (!t.category_id) continue
+    spend.set(t.category_id, (spend.get(t.category_id) || 0) + Number(t.amount))
+  }
+  return categories
+    .filter(c => c.kind === 'expense')
+    .map(c => {
+      const budget = Number(c.monthly_budget) || 0
+      const spent = spend.get(c.id) || 0
+      const remaining = budget - spent
+      const pct = budget > 0 ? Math.round((spent / budget) * 100) : 0
+      return { categoryId: c.id, name: c.name, color: c.color || '#888888', budget, spent, remaining, pct, over: budget > 0 && spent > budget }
+    })
+    .sort((a, b) => {
+      if ((a.budget > 0) !== (b.budget > 0)) return a.budget > 0 ? -1 : 1
+      if (a.budget > 0) return b.pct - a.pct
+      return b.spent - a.spent
+    })
+}
+
+// ─── Finance: Savings goals ───────────────────
+export async function getSavingsGoals(userId: string): Promise<SavingsGoalStatus[]> {
+  const [{ data: goals }, { data: contribs }] = await Promise.all([
+    supabase.from('savings_goals').select('*').eq('user_id', userId).order('is_achieved').order('sort_order').order('created_at'),
+    supabase.from('savings_contributions').select('goal_id, amount').eq('user_id', userId),
+  ])
+  const savedMap = new Map<string, number>()
+  for (const c of (contribs || []) as { goal_id: string; amount: number }[]) {
+    savedMap.set(c.goal_id, (savedMap.get(c.goal_id) || 0) + Number(c.amount))
+  }
+  return ((goals || []) as SavingsGoal[]).map(g => {
+    const saved = savedMap.get(g.id) || 0
+    const target = Number(g.target_amount) || 0
+    const remaining = Math.max(0, target - saved)
+    const pct = target > 0 ? Math.min(100, Math.round((saved / target) * 100)) : 0
+    return { ...g, saved, remaining, pct, daysLeft: g.target_date ? daysUntil(g.target_date) : null }
+  })
+}
+
+export async function createSavingsGoal(g: Omit<SavingsGoal, 'id' | 'created_at'>) {
+  const { data, error } = await supabase.from('savings_goals').insert(g).select().single()
+  if (error) throw error
+  return data as SavingsGoal
+}
+export async function updateSavingsGoal(id: string, updates: Partial<SavingsGoal>) {
+  const { error } = await supabase.from('savings_goals').update(updates).eq('id', id)
+  if (error) throw error
+}
+export async function deleteSavingsGoal(id: string) {
+  const { error } = await supabase.from('savings_goals').delete().eq('id', id)
+  if (error) throw error
+}
+export async function getContributions(goalId: string): Promise<SavingsContribution[]> {
+  const { data } = await supabase.from('savings_contributions').select('*').eq('goal_id', goalId)
+    .order('contributed_at', { ascending: false }).order('created_at', { ascending: false })
+  return (data || []) as SavingsContribution[]
+}
+export async function deleteContribution(id: string) {
+  const { error } = await supabase.from('savings_contributions').delete().eq('id', id)
+  if (error) throw error
+}
+
+// Adds a contribution; if it funds the goal for the first time, marks achieved.
+// Returns { justAchieved } so the UI can celebrate + award XP.
+export async function addContribution(
+  c: Omit<SavingsContribution, 'id' | 'created_at'>,
+  goal: SavingsGoalStatus,
+): Promise<{ justAchieved: boolean }> {
+  const { error } = await supabase.from('savings_contributions').insert(c)
+  if (error) throw error
+  const newSaved = goal.saved + Number(c.amount)
+  const justAchieved = !goal.is_achieved && newSaved >= Number(goal.target_amount)
+  if (justAchieved) {
+    await supabase.from('savings_goals').update({ is_achieved: true }).eq('id', goal.id)
+  }
+  return { justAchieved }
+}
+
+// ─── Finance: Recurring rules ─────────────────
+export async function getRecurringRules(userId: string): Promise<RecurringRule[]> {
+  const { data } = await supabase.from('recurring_rules')
+    .select('*').eq('user_id', userId).eq('is_active', true)
+    .order('next_run')
+  return (data || []) as RecurringRule[]
+}
+export async function createRecurringRule(r: Omit<RecurringRule, 'id' | 'created_at'>) {
+  const { data, error } = await supabase.from('recurring_rules').insert(r).select().single()
+  if (error) throw error
+  return data as RecurringRule
+}
+export async function updateRecurringRule(id: string, updates: Partial<RecurringRule>) {
+  const { error } = await supabase.from('recurring_rules').update(updates).eq('id', id)
+  if (error) throw error
+}
+export async function deleteRecurringRule(id: string) {
+  const { error } = await supabase.from('recurring_rules').update({ is_active: false }).eq('id', id)
+  if (error) throw error
+}
+
+// Materializes any due recurring occurrences into transactions and advances next_run.
+// Cron-free: runs on page load. Returns how many transactions were created.
+export async function processDueRecurring(userId: string): Promise<number> {
+  const rules = await getRecurringRules(userId)
+  const today = new Date().toISOString().split('T')[0]
+  let created = 0
+  for (const r of rules) {
+    let next = r.next_run
+    const toInsert: Omit<Transaction, 'id' | 'created_at'>[] = []
+    let guard = 0
+    while (next <= today && guard < 120) {
+      toInsert.push({
+        user_id: userId, type: r.type, amount: Number(r.amount),
+        category_id: r.category_id, account_id: r.account_id, to_account_id: null,
+        txn_date: next, note: r.note, recurring_id: r.id,
+      })
+      next = addPeriod(next, r.frequency)
+      guard++
+    }
+    if (toInsert.length > 0) {
+      await supabase.from('transactions').insert(toInsert)
+      await supabase.from('recurring_rules').update({ next_run: next }).eq('id', r.id)
+      created += toInsert.length
+    }
+  }
+  return created
+}
+
+// ─── Finance: Monthly trends ──────────────────
+export async function getMonthlyTrends(userId: string, months = 6, ref: Date = new Date()): Promise<MonthlyTrend[]> {
+  const startDate = shiftMonth(ref, -(months - 1))
+  const start = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-01`
+  const end = monthRange(ref).end
+  const txns = await getTransactions(userId, { start, end })
+
+  // Pre-seed every month bucket so gaps render as zero.
+  const buckets = new Map<string, MonthlyTrend>()
+  for (let i = months - 1; i >= 0; i--) {
+    const m = shiftMonth(ref, -i)
+    buckets.set(monthKey(m), {
+      month: monthKey(m),
+      label: m.toLocaleDateString('en-IN', { month: 'short' }),
+      income: 0, expense: 0, net: 0,
+    })
+  }
+  for (const t of txns) {
+    const key = t.txn_date.slice(0, 7)
+    const b = buckets.get(key)
+    if (!b) continue
+    if (t.type === 'income') b.income += Number(t.amount)
+    else if (t.type === 'expense') b.expense += Number(t.amount)
+  }
+  return [...buckets.values()].map(b => ({ ...b, net: b.income - b.expense }))
 }

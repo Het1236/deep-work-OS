@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@/components/UserContext'
-import { getHabits, getHabitLogs, toggleHabitLog, createHabit, awardXP } from '@/lib/data'
+import { getHabits, getHabitLogs, toggleHabitLog, createHabit, awardXP, checkAndAwardBadges } from '@/lib/data'
 import type { Habit, HabitLog } from '@/lib/types'
 import { useXPToast } from '@/components/XPToast'
 import {
@@ -67,7 +67,7 @@ function getStreak(habitId: string, logs: HabitLog[]): number {
 
 export default function HabitsPage() {
   const { userId } = useUser()
-  const { showXP } = useXPToast()
+  const { showXP, showBadge } = useXPToast()
   const [habits, setHabits] = useState<Habit[]>([])
   const [logs, setLogs] = useState<HabitLog[]>([])
   const [loading, setLoading] = useState(true)
@@ -111,6 +111,15 @@ export default function HabitsPage() {
       try {
         const result = await awardXP(userId, 'habit_complete', { habitId })
         showXP(result.xpAwarded, 'Habit Complete')
+
+        const newBadges = await checkAndAwardBadges(userId)
+        const badgeTitles: Record<string, string> = {
+          first_session: 'First Focus', week_warrior: 'Week Warrior',
+          '100_hours': 'Centurion', habit_streak_7: 'Habit Master',
+          quality_8: 'Flow State', shutdown_30: 'Discipline',
+          perfect_week: 'Perfect Week'
+        }
+        newBadges.forEach(b => showBadge(b, badgeTitles[b] || b))
       } catch (err) {
         console.error('XP award failed', err)
       }

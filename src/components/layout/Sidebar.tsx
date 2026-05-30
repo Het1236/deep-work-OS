@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Trophy, Brain, CheckCircle2,
   FolderKanban, Target, BookOpen, Calendar,
-  Sparkles, Users, Zap, Timer, Database, Plus, ClipboardList
+  Sparkles, Users, Zap, Timer, Database, Plus, ClipboardList, Wallet
 } from 'lucide-react'
 
 const navItems = [
@@ -19,6 +19,7 @@ const navItems = [
   { icon: Calendar, label: 'Calendar', href: '/calendar' },
   { icon: ClipboardList, label: 'Planner', href: '/planner' },
   { icon: Timer, label: 'Focus Timer', href: '/timer' },
+  { icon: Wallet, label: 'Budget', href: '/budget' },
   { icon: Database, label: 'Second Brain', href: '/second-brain' },
   { icon: Sparkles, label: 'AI Reports', href: '/ai-report' },
   { icon: Users, label: 'Group', href: '/group' },

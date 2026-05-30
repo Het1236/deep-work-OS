@@ -6,7 +6,7 @@ import { createSession, endSession, discardSession, awardXP, checkAndAwardBadges
 import { Task } from '@/lib/types'
 import { useXPToast } from '@/components/XPToast'
 import {
-  Timer, Play, Pause, Square, RotateCcw, Volume2, VolumeX, Trash2, Clock
+  Timer, Play, Pause, Square, RotateCcw, Volume2, VolumeX, Trash2, Clock, ShieldAlert
 } from 'lucide-react'
 import { useTimerStore } from '@/stores/timerStore'
 
@@ -15,7 +15,8 @@ export default function FocusTimerPage() {
   const { showXP, showBadge } = useXPToast()
   
   const { sessionId, isRunning, elapsed, mode, startTimer, pauseTimer, resumeTimer, stopTimer, setMode, resetTimer } = useTimerStore()
-  // Add hydration check for Zustand persist
+  
+  /* ---- Hydration Guard ---- */
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
 
@@ -30,6 +31,14 @@ export default function FocusTimerPage() {
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set())
   const [durationOverride, setDurationOverride] = useState<number | null>(null)
 
+  /* ---- Distractions & Ambient Audio ---- */
+  const [distractions, setDistractions] = useState<string[]>([])
+  const [newDistraction, setNewDistraction] = useState('')
+  const [ambientSound, setAmbientSound] = useState<'none' | 'white' | 'brown' | 'rain'>('none')
+  const [audioCtx, setAudioCtx] = useState<AudioContext | null>(null)
+  const [noiseNode, setNoiseNode] = useState<AudioBufferSourceNode | null>(null)
+  const [streamAudio, setStreamAudio] = useState<HTMLAudioElement | null>(null)
+
   const seconds = elapsed
 
   useEffect(() => {
@@ -42,6 +51,39 @@ export default function FocusTimerPage() {
     return () => clearInterval(interval)
   }, [isRunning])
 
+  useEffect(() => {
+    async function initFromParams() {
+      if (!userId) return
+      try {
+        const tasks = await getActiveTasks(userId)
+        setActiveTasks(tasks)
+        
+        if (typeof window !== 'undefined') {
+          const params = new URLSearchParams(window.location.search)
+          const tId = params.get('taskId')
+          const label = params.get('label')
+          
+          if (tId) {
+            setSelectedTaskIds(new Set([tId]))
+            const matchedTask = tasks.find(t => t.id === tId)
+            if (matchedTask) {
+              setSessionLabel(matchedTask.title)
+            } else if (label) {
+              setSessionLabel(label)
+            }
+          } else if (label) {
+            setSessionLabel(label)
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load active tasks or search parameters', err)
+      }
+    }
+    if (mounted) {
+      initFromParams()
+    }
+  }, [userId, mounted])
+
   const hours = Math.floor(seconds / 3600)
   const mins = Math.floor((seconds % 3600) / 60)
   const secs = seconds % 60
@@ -51,6 +93,83 @@ export default function FocusTimerPage() {
   const maxSeconds = mode === 'deepwork' ? 5400 : 900
   const progress = Math.min(seconds / maxSeconds, 1)
   const dashOffset = circumference * (1 - progress)
+
+  /* ---- Ambient Sounds Logic ---- */
+  const playAmbient = (type: 'none' | 'white' | 'brown' | 'rain') => {
+    // Cleanup active
+    if (noiseNode) {
+      try { noiseNode.stop() } catch {}
+      setNoiseNode(null)
+    }
+    if (audioCtx) {
+      try { audioCtx.close() } catch {}
+      setAudioCtx(null)
+    }
+    if (streamAudio) {
+      streamAudio.pause()
+      setStreamAudio(null)
+    }
+
+    if (type === 'none') return
+
+    if (type === 'white' || type === 'brown') {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const bufferSize = 2 * ctx.sampleRate
+      const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
+      const output = noiseBuffer.getChannelData(0)
+
+      if (type === 'white') {
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = Math.random() * 2 - 1
+        }
+      } else {
+        // Brown noise low-pass filtering
+        let lastOut = 0.0
+        for (let i = 0; i < bufferSize; i++) {
+          const white = Math.random() * 2 - 1
+          output[i] = (lastOut + (0.02 * white)) / 1.02
+          lastOut = output[i]
+          output[i] *= 3.5 // Volume boost
+        }
+      }
+
+      const source = ctx.createBufferSource()
+      source.buffer = noiseBuffer
+      source.loop = true
+
+      const gainNode = ctx.createGain()
+      gainNode.gain.value = soundOn ? 0.08 : 0
+
+      source.connect(gainNode)
+      gainNode.connect(ctx.destination)
+      source.start()
+
+      setAudioCtx(ctx)
+      setNoiseNode(source)
+    } else if (type === 'rain') {
+      const audio = new Audio('https://www.soundjay.com/nature/sounds/rain-07.mp3')
+      audio.loop = true
+      audio.volume = soundOn ? 0.25 : 0
+      audio.play().catch(e => console.log('Audio autoplay blocked', e))
+      setStreamAudio(audio)
+    }
+  }
+
+  useEffect(() => {
+    if (!mounted) return
+    playAmbient(ambientSound)
+    return () => {
+      if (noiseNode) try { noiseNode.stop() } catch {}
+      if (audioCtx) try { audioCtx.close() } catch {}
+      if (streamAudio) streamAudio.pause()
+    }
+  }, [ambientSound])
+
+  useEffect(() => {
+    if (streamAudio) {
+      streamAudio.volume = soundOn ? 0.25 : 0
+    }
+  }, [soundOn])
 
   async function handleStart() {
     if (!userId) return
@@ -63,6 +182,7 @@ export default function FocusTimerPage() {
           session_date: new Date().toISOString().split('T')[0],
         })
         startTimer(session.id, mode)
+        setDistractions([]) // reset session distractions
       } catch (err: any) {
         console.error("Failed to create session", err);
         alert("Failed to start session: " + (err?.message || JSON.stringify(err)));
@@ -103,11 +223,16 @@ export default function FocusTimerPage() {
     
     if (duration > 0 && mode === 'deepwork' && sessionId && userId && sessionId !== 'break_session') {
       try {
+        const structuredNotes = JSON.stringify({
+          notes: notes || sessionLabel || '',
+          distractions: distractions
+        })
+
         await endSession(sessionId, {
           ended_at: new Date().toISOString(),
           duration_minutes: duration,
           intensity_score: intensity,
-          notes: notes || sessionLabel || undefined,
+          notes: structuredNotes,
           deep_work_pct: deepWorkPct,
         })
 
@@ -125,6 +250,8 @@ export default function FocusTimerPage() {
         const badgeTitles: Record<string, string> = {
           first_session: 'First Focus', week_warrior: 'Week Warrior',
           '100_hours': 'Centurion', habit_streak_7: 'Habit Master',
+          quality_8: 'Flow State', shutdown_30: 'Discipline',
+          perfect_week: 'Perfect Week'
         }
         newBadges.forEach(b => showBadge(b, badgeTitles[b] || b))
       } catch (err) {
@@ -155,6 +282,7 @@ export default function FocusTimerPage() {
     setNotes('')
     setDeepWorkPct(100)
     setDurationOverride(null)
+    setDistractions([])
     resetTimer()
     setSaving(false)
   }
@@ -163,7 +291,6 @@ export default function FocusTimerPage() {
     resetTimer()
   }
 
-  // Prevent hydration mismatch
   if (!mounted) return null;
 
   return (
@@ -269,6 +396,56 @@ export default function FocusTimerPage() {
         </button>
       </div>
 
+      {/* Ambient Sound Selector */}
+      <div className="ambient-selector animate-fade-in" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+        <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Ambient Sound:</span>
+        <select
+          className="input"
+          value={ambientSound}
+          onChange={e => setAmbientSound(e.target.value as any)}
+          style={{ fontSize: '0.75rem', padding: '4px 10px', width: '130px', background: 'var(--bg-elevated)' }}
+        >
+          <option value="none">None</option>
+          <option value="brown">Brown Noise</option>
+          <option value="white">White Noise</option>
+          <option value="rain">Nature Rain</option>
+        </select>
+      </div>
+
+      {/* Distraction Shield */}
+      {(isRunning || elapsed > 0) && mode === 'deepwork' && (
+        <div className="timer-distraction card animate-fade-in" style={{ width: '90%', maxWidth: '400px', padding: '16px', marginTop: '12px' }}>
+          <h4 style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <ShieldAlert size={15} style={{ color: 'var(--accent)' }} /> DISTRACTION SHIELD
+          </h4>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+            <input
+              className="input"
+              placeholder="What distracted you? Enter to log."
+              value={newDistraction}
+              onChange={e => setNewDistraction(e.target.value)}
+              style={{ fontSize: '0.8125rem', padding: '8px' }}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && newDistraction.trim()) {
+                  setDistractions(prev => [...prev, newDistraction.trim()])
+                  setNewDistraction('')
+                }
+              }}
+            />
+          </div>
+          {distractions.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {distractions.map((d, i) => (
+                <span key={i} className="badge badge-amber" style={{ fontSize: '0.6875rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {d}
+                  <button onClick={() => setDistractions(prev => prev.filter((_, idx) => idx !== i))} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0 }}>×</button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Post-Session Wrap-Up Modal */}
       {isWrapUpOpen && (
         <div className="wrapup-modal-overlay">
@@ -330,7 +507,7 @@ export default function FocusTimerPage() {
 
             <div className="form-group mb-6">
               <label className="text-sm text-secondary block mb-1">Check off completed tasks</label>
-              <div className="tasks-list">
+              <div className="wrapup-tasks-list">
                 {activeTasks.length > 0 ? activeTasks.map(task => (
                   <label key={task.id} className="task-checkbox-item">
                     <input
@@ -404,7 +581,7 @@ export default function FocusTimerPage() {
         .timer-start-btn { height: 56px; padding: 0 var(--space-2xl); font-size: 1rem; border-radius: var(--radius-full); gap: var(--space-sm); }
         .wrapup-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); display: flex; align-items: center; justify-content: center; z-index: 50; }
         .wrapup-modal { background: rgba(22,22,26,0.82); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: var(--space-2xl); width: 90%; max-width: 520px; box-shadow: 0 16px 64px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
-        .tasks-list { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; background: var(--bg-elevated); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-default); }
+        .wrapup-tasks-list { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; background: var(--bg-elevated); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-default); }
         .task-checkbox-item { display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 4px 0; }
         .task-checkbox-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }
         .task-title { color: var(--text-primary); font-size: 0.9rem; flex: 1; }

@@ -206,3 +206,117 @@ export type ScoreboardData = {
   // Session history
   sessions: DeepWorkSession[]
 }
+
+// ─── Finance / Budget ─────────────────────────
+export type FinanceAccount = {
+  id: string
+  user_id: string
+  name: string
+  type: 'cash' | 'bank' | 'upi' | 'wallet' | 'other'
+  opening_balance: number
+  icon: string | null
+  color: string | null
+  is_active: boolean
+  sort_order: number
+  created_at: string
+}
+
+export type FinanceCategory = {
+  id: string
+  user_id: string
+  name: string
+  kind: 'income' | 'expense'
+  icon: string | null
+  color: string | null
+  monthly_budget: number | null
+  sort_order: number
+  is_archived: boolean
+  created_at: string
+}
+
+export type Transaction = {
+  id: string
+  user_id: string
+  type: 'income' | 'expense' | 'transfer'
+  amount: number
+  category_id: string | null
+  account_id: string | null
+  to_account_id: string | null
+  txn_date: string
+  note: string | null
+  recurring_id: string | null
+  created_at: string
+}
+
+export type CategorySpend = { categoryId: string; name: string; color: string; total: number }
+export type DailySpend = { date: string; income: number; expense: number }
+
+export type CategoryBudgetStatus = {
+  categoryId: string
+  name: string
+  color: string
+  budget: number       // monthly_budget (0 if unset)
+  spent: number        // this month's expense in this category
+  remaining: number    // budget - spent (can be negative)
+  pct: number          // 0..100+ (spent/budget*100; 0 if no budget)
+  over: boolean        // spent > budget (and budget > 0)
+}
+
+export type BudgetOverview = {
+  totalBalance: number
+  monthIncome: number
+  monthExpense: number
+  monthNet: number
+  accounts: (FinanceAccount & { balance: number })[]
+  categorySpend: CategorySpend[]      // expense breakdown for the month
+  dailySeries: DailySpend[]           // per-day income/expense for the month
+  recentTransactions: Transaction[]   // latest 8
+}
+
+export type SavingsGoal = {
+  id: string
+  user_id: string
+  name: string
+  target_amount: number
+  target_date: string | null
+  icon: string | null
+  color: string | null
+  is_achieved: boolean
+  sort_order: number
+  created_at: string
+}
+
+export type SavingsContribution = {
+  id: string
+  user_id: string
+  goal_id: string
+  amount: number
+  contributed_at: string
+  note: string | null
+  created_at: string
+}
+
+export type SavingsGoalStatus = SavingsGoal & {
+  saved: number
+  remaining: number
+  pct: number          // 0..100 (capped)
+  daysLeft: number | null
+}
+
+export type RecurringFrequency = 'daily' | 'weekly' | 'monthly'
+
+export type RecurringRule = {
+  id: string
+  user_id: string
+  type: 'income' | 'expense'
+  amount: number
+  category_id: string | null
+  account_id: string | null
+  note: string | null
+  frequency: RecurringFrequency
+  next_run: string
+  is_active: boolean
+  created_at: string
+}
+
+export type MonthlyTrend = { month: string; label: string; income: number; expense: number; net: number }

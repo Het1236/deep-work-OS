@@ -3,7 +3,7 @@
 import { BookOpen, Plus, Heart, Zap, Sun, Save, Loader2, X } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@/components/UserContext'
-import { getJournalEntries, upsertJournalEntry, awardXP } from '@/lib/data'
+import { getJournalEntries, upsertJournalEntry, awardXP, checkAndAwardBadges } from '@/lib/data'
 import { useXPToast } from '@/components/XPToast'
 import type { JournalEntry } from '@/lib/types'
 
@@ -11,7 +11,7 @@ const energyEmoji = ['', '😴', '😐', '🙂', '😊', '🔥']
 
 export default function JournalPage() {
   const { userId } = useUser()
-  const { showXP } = useXPToast()
+  const { showXP, showBadge } = useXPToast()
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [loading, setLoading] = useState(true)
   
@@ -86,6 +86,15 @@ export default function JournalPage() {
         const shutdownResult = await awardXP(userId, 'shutdown_ritual', { entryDate })
         showXP(shutdownResult.xpAwarded, 'Shutdown Ritual')
       }
+
+      const newBadges = await checkAndAwardBadges(userId)
+      const badgeTitles: Record<string, string> = {
+        first_session: 'First Focus', week_warrior: 'Week Warrior',
+        '100_hours': 'Centurion', habit_streak_7: 'Habit Master',
+        quality_8: 'Flow State', shutdown_30: 'Discipline',
+        perfect_week: 'Perfect Week'
+      }
+      newBadges.forEach(b => showBadge(b, badgeTitles[b] || b))
     } catch (err) {
       console.error('XP award failed', err)
     }
