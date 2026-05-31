@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getAIProvider, AINotConfiguredError } from '@/lib/ai'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -116,55 +117,20 @@ Respond in this exact JSON structure:
 Be specific, data-driven, encouraging yet honest. If data is sparse (new user), acknowledge it and provide general deep work tips.`
 
   let reportText = ''
-  let apiUsed = 'Grok'
+  let apiUsed = 'AI'
 
   try {
-    if (process.env.GROK_API_KEY) {
-      const grokRes = await fetch('https://api.xai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.GROK_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: 'grok-2-1212',
-          messages: [
-            { role: 'system', content: 'You are a helpful assistant that outputs only JSON.' },
-            { role: 'user', content: prompt }
-          ],
-          response_format: { type: 'json_object' }
-        })
-      })
+    const ai = getAIProvider()
+    apiUsed = ai.name
+    reportText = await ai.complete(
+      [
+        { role: 'system', content: 'You are a helpful assistant that outputs only valid JSON.' },
+        { role: 'user', content: prompt },
+      ],
+      { json: true, temperature: 0.7, maxTokens: 2048 }
+    )
 
-      const grokData = await grokRes.json()
-      reportText = grokData?.choices?.[0]?.message?.content || ''
-    } else if (process.env.GEMINI_API_KEY) {
-      apiUsed = 'Gemini'
-      const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 2048,
-              responseMimeType: 'application/json',
-            },
-          }),
-        }
-      )
-
-      const geminiData = await geminiRes.json()
-      reportText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
-    } else {
-      return NextResponse.json({ error: 'No AI API Key configured. Please add GROK_API_KEY or GEMINI_API_KEY to your environment.' }, { status: 500 })
-    }
-
-    if (!reportText) {
-      throw new Error(`Empty response from ${apiUsed} API`)
-    }
+    if (!reportText) throw new Error(`Empty response from ${apiUsed}`)
 
     const reportObj = JSON.parse(reportText)
 
@@ -178,7 +144,7 @@ Be specific, data-driven, encouraging yet honest. If data is sparse (new user), 
         period_end: today,
         execution_snapshot: {
           ...reportObj.executionSnapshot,
-          weekSummary: reportObj.weekSummary
+          weekSummary: reportObj.weekSummary,
         },
         drip_audit: reportObj.dripAudit,
         pattern_insights: JSON.stringify(reportObj.insights),
@@ -189,25 +155,28 @@ Be specific, data-driven, encouraging yet honest. If data is sparse (new user), 
           habitPct,
           shutdownDays,
           goalsCount: goalsData.length,
-          apiUsed
-        }
+          apiUsed,
+        },
       })
       .select()
       .single()
 
     if (insertError) {
       console.error('Failed to store AI report:', insertError)
-      // Return transient report as fallback
       return NextResponse.json({ report: reportObj, generatedAt: new Date().toISOString() })
     }
 
     return NextResponse.json({
       id: insertedReport.id,
       report: reportObj,
-      generatedAt: insertedReport.generated_at
+      generatedAt: insertedReport.generated_at,
     })
-  } catch (err: any) {
+  } catch (err) {
+    if (err instanceof AINotConfiguredError) {
+      return NextResponse.json({ error: err.message, code: 'AI_NOT_CONFIGURED' }, { status: 503 })
+    }
     console.error('AI generation error:', err)
-    return NextResponse.json({ error: err?.message || 'Failed to generate report' }, { status: 500 })
+    const message = err instanceof Error ? err.message : 'Failed to generate report'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
