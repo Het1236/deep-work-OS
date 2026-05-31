@@ -75,9 +75,12 @@ export default function ProjectsPage() {
 
   useEffect(() => { loadData() }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Derived: today's tasks = tasks scheduled today OR unscheduled active tasks
+  // Derived: today's tasks = scheduled today, OR unscheduled active, OR captured
+  // (project-less) active "inbox" tasks — so quick captures always surface.
   const dailyTasks = allTasks.filter(t =>
-    t.scheduled_date === today || (!t.scheduled_date && t.status !== 'done')
+    t.scheduled_date === today ||
+    (!t.scheduled_date && t.status !== 'done') ||
+    (!t.project_id && t.status !== 'done')
   )
 
   // ─── Handlers ──────────────────────

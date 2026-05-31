@@ -58,7 +58,7 @@ Decide which module the message belongs to and return ONLY this JSON shape (no p
 Rules:
 - Money like "120 chai", "spent 50 on bus", "got 5000 allowance" => budget. Default type is expense; "got/received/earned/allowance/salary" => income.
 - Pick the closest matching categoryName/walletName from the lists; if none fits, use null.
-- "remind me", "task:", "todo" => task.
+- "remind me", "task:", "todo" => task. Set scheduledDate ONLY if the user explicitly names a day or date (e.g. "tomorrow", "Monday", "June 2"); otherwise scheduledDate MUST be null.
 - "journal:", "today i", feelings/reflections => journal (put the full text in "text").
 - "done <habit>", "did <habit>", marking a habit done => habit (set habitName to the closest habit).
 - Only include fields relevant to the chosen module; others may be omitted.
