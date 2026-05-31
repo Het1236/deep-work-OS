@@ -248,7 +248,7 @@ export default function GoalsPage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-lg)' }}>
           {/* Higher-Self / Vision Column */}
-          <div className="card" style={{ background: 'rgba(20,20,20,0.55)', borderLeft: '3px solid var(--accent)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="card" style={{ background: 'var(--bg-surface-glass)', borderLeft: '3px solid var(--accent)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
               <div style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.12em', marginBottom: '8px', fontFamily: 'var(--font-mono)' }}>
                 FUTURE IDENTITY
@@ -310,7 +310,7 @@ export default function GoalsPage() {
           </div>
 
           {/* Anti-Vision Column */}
-          <div className="card" style={{ background: 'rgba(20,20,20,0.55)', borderLeft: '3px solid var(--status-danger)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="card" style={{ background: 'var(--bg-surface-glass)', borderLeft: '3px solid var(--status-danger)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
               <div style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--status-danger)', letterSpacing: '0.12em', marginBottom: '8px', fontFamily: 'var(--font-mono)' }}>
                 ANTI-VISION STATEMENT
@@ -381,7 +381,7 @@ export default function GoalsPage() {
                     {menuOpen === goal.id && (
                       <div style={{
                         position: 'absolute', right: 0, top: '100%', zIndex: 20,
-                        background: 'rgba(20,20,20,0.95)', border: '1px solid rgba(255,255,255,0.1)',
+                        background: 'var(--bg-elevated)', border: '1px solid var(--border-default)',
                         borderRadius: '8px', padding: '6px 0', minWidth: '140px',
                         backdropFilter: 'blur(16px)',
                       }}>
@@ -430,7 +430,7 @@ export default function GoalsPage() {
                       style={{ flex: 1, accentColor: 'var(--accent)' }}/>
                     <span style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 700, minWidth: '35px' }}>{editProgress}%</span>
                     <button onClick={() => handleProgressUpdate(goal.id, editProgress)}
-                      style={{ background: 'var(--accent)', color: '#0e0e0e', border: 'none',
+                      style={{ background: 'var(--accent)', color: 'var(--on-accent)', border: 'none',
                         borderRadius: '6px', padding: '4px 12px', fontSize: '0.6875rem',
                         fontWeight: 700, cursor: 'pointer' }}>
                       Save

@@ -160,7 +160,7 @@ export default function SettingsPage() {
         .settings-label { display: block; font-size: 0.8125rem; font-weight: 500; color: var(--text-secondary); margin-bottom: var(--space-sm); }
         .settings-toggle-group { display: flex; gap: var(--space-sm); }
         .settings-toggle { padding: var(--space-sm) var(--space-lg); font-size: 0.8125rem; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text-secondary); cursor: pointer; font-family: var(--font-sans); }
-        .settings-toggle-active { background: var(--accent); color: #0F0F0F; border-color: var(--accent); font-weight: 600; }
+        .settings-toggle-active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600; }
         .settings-toggle:disabled { opacity: 0.4; cursor: not-allowed; }
         .color-swatch { width: 28px; height: 28px; border-radius: var(--radius-full); border: 2px solid transparent; cursor: pointer; padding: 0; }
         .color-active { border-color: white; box-shadow: 0 0 0 2px var(--accent); }
@@ -168,7 +168,7 @@ export default function SettingsPage() {
         .switch { width: 36px; height: 20px; border-radius: var(--radius-full); background: var(--bg-hover); position: relative; cursor: pointer; transition: background var(--transition-fast); }
         .switch::after { content: ''; position: absolute; width: 16px; height: 16px; border-radius: var(--radius-full); background: var(--text-tertiary); top: 2px; left: 2px; transition: all var(--transition-fast); }
         .switch-on { background: var(--accent); }
-        .switch-on::after { left: 18px; background: #0F0F0F; }
+        .switch-on::after { left: 18px; background: var(--on-accent); }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
     </div>

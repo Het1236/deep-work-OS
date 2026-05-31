@@ -51,7 +51,7 @@
   gap: var(--space-md);
 }
 .st {
-  background: rgba(20,20,20,0.6); backdrop-filter: blur(16px);
+  background: var(--bg-surface-glass); backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-default); border-radius: var(--radius-lg);
   padding: var(--space-lg); display: flex; flex-direction: column;
@@ -76,7 +76,7 @@
    SLOT CARD — the core 30-min block card
    ═══════════════════════════════════════════════ */
 .slot-card {
-  background: rgba(20, 20, 20, 0.55);
+  background: var(--bg-surface-glass);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   border: 1px solid rgba(255,255,255,0.07);
@@ -94,7 +94,7 @@
 /* Filled (occupied) card */
 .slot-card.filled {
   border-left: 3px solid var(--bc, var(--accent));
-  background: rgba(22, 22, 22, 0.7);
+  background: var(--bg-surface-glass);
 }
 .slot-card.filled:hover {
   box-shadow: 0 4px 24px rgba(0,0,0,0.35);
@@ -183,7 +183,7 @@
 }
 .merge-btn {
   width: 24px; height: 24px; border-radius: 50%;
-  background: rgba(14,14,14,0.95);
+  background: var(--bg-elevated);
   border: 1.5px solid rgba(255,255,255,0.1);
   color: var(--text-tertiary);
   display: flex; align-items: center; justify-content: center;
@@ -250,7 +250,7 @@
 .sf-save {
   flex: 1; padding: 10px;
   background: var(--primary-gradient, linear-gradient(135deg, #4CAF7D, #2E7D5B));
-  color: #0e0e0e; border: none; border-radius: 8px;
+  color: var(--on-accent); border: none; border-radius: 8px;
   font-size: 0.75rem; font-weight: 700; cursor: pointer;
   letter-spacing: 0.06em; font-family: var(--font-sans);
   transition: all 0.15s;

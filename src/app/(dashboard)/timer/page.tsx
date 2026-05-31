@@ -563,7 +563,7 @@ export default function FocusTimerPage() {
         .mode-toggle { display: flex; background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-full); overflow: hidden; }
         .mode-btn { padding: var(--space-sm) var(--space-2xl); font-size: 0.875rem; font-weight: 500; color: var(--text-secondary); background: none; border: none; cursor: pointer; transition: all var(--transition-fast); font-family: var(--font-sans); }
         .mode-btn:hover { color: var(--text-primary); }
-        .mode-active { background: var(--accent); color: #0F0F0F; font-weight: 600; }
+        .mode-active { background: var(--accent); color: var(--on-accent); font-weight: 600; }
         .timer-ring-wrapper { position: relative; width: 300px; height: 300px; }
         .timer-ring { width: 100%; height: 100%; }
         .timer-ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -580,12 +580,12 @@ export default function FocusTimerPage() {
         .timer-ctrl-btn { width: 48px; height: 48px; border-radius: var(--radius-full); display: flex; align-items: center; justify-content: center; padding: 0; }
         .timer-start-btn { height: 56px; padding: 0 var(--space-2xl); font-size: 1rem; border-radius: var(--radius-full); gap: var(--space-sm); }
         .wrapup-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); display: flex; align-items: center; justify-content: center; z-index: 50; }
-        .wrapup-modal { background: rgba(22,22,26,0.82); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: var(--space-2xl); width: 90%; max-width: 520px; box-shadow: 0 16px 64px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
+        .wrapup-modal { background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: 20px; padding: var(--space-2xl); width: 90%; max-width: 520px; box-shadow: var(--shadow-lg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
         .wrapup-tasks-list { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; background: var(--bg-elevated); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-default); }
         .task-checkbox-item { display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 4px 0; }
         .task-checkbox-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }
         .task-title { color: var(--text-primary); font-size: 0.9rem; flex: 1; }
-        .today-badge { font-size: 0.7rem; color: #0F0F0F; background: var(--status-success); padding: 2px 6px; border-radius: 4px; font-weight: 600; margin-left: 8px; }
+        .today-badge { font-size: 0.7rem; color: var(--on-accent); background: var(--status-success); padding: 2px 6px; border-radius: 4px; font-weight: 600; margin-left: 8px; }
       `}</style>
     </div>
   )

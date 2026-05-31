@@ -9,9 +9,9 @@
   display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg);
 }
 .gp-vision-main {
-  background: rgba(20,20,20,0.55); backdrop-filter: blur(18px);
+  background: var(--bg-surface-glass); backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(255,255,255,0.07);
+  border: 1px solid var(--border-subtle);
   border-radius: 14px; padding: 32px;
 }
 .gp-vision-label {
@@ -34,9 +34,9 @@
   display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
 }
 .gp-attr {
-  background: rgba(20,20,20,0.55); backdrop-filter: blur(14px);
+  background: var(--bg-surface-glass); backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255,255,255,0.07);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px; padding: 20px;
   display: flex; flex-direction: column; gap: 10px;
   transition: all 0.2s ease;
@@ -84,9 +84,9 @@
   gap: var(--space-lg); position: relative;
 }
 .gp-card {
-  background: rgba(20,20,20,0.55); backdrop-filter: blur(18px);
+  background: var(--bg-surface-glass); backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(255,255,255,0.07);
+  border: 1px solid var(--border-subtle);
   border-radius: 14px; padding: 22px;
   transition: all 0.25s ease; position: relative;
   cursor: default;
@@ -162,7 +162,7 @@
 .gp-fab {
   position: fixed; bottom: 32px; right: 32px;
   width: 52px; height: 52px; border-radius: 14px;
-  background: var(--accent); border: none; color: #0e0e0e;
+  background: var(--accent); border: none; color: var(--on-accent);
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; box-shadow: 0 4px 24px rgba(76,175,125,0.3);
   transition: all 0.2s ease; z-index: 10;
@@ -174,9 +174,9 @@
 
 /* ─── GPS Architecture Flow ─── */
 .gp-flow-card {
-  background: rgba(20,20,20,0.55); backdrop-filter: blur(18px);
+  background: var(--bg-surface-glass); backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(255,255,255,0.07);
+  border: 1px solid var(--border-subtle);
   border-radius: 14px; padding: 32px; text-align: center;
 }
 .gp-flow-title {
@@ -202,7 +202,7 @@
 .gp-flow-icon {
   width: 48px; height: 48px; border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
-  border: 1px solid rgba(255,255,255,0.07);
+  border: 1px solid var(--border-subtle);
   transition: all 0.2s;
 }
 .gp-flow-icon.active {
@@ -221,9 +221,9 @@
   display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg);
 }
 .gp-habits-card, .gp-pulse-card {
-  background: rgba(20,20,20,0.55); backdrop-filter: blur(18px);
+  background: var(--bg-surface-glass); backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(255,255,255,0.07);
+  border: 1px solid var(--border-subtle);
   border-radius: 14px; padding: 24px;
 }
 .gp-habits-hdr {
@@ -290,7 +290,7 @@
   display: flex; align-items: center; justify-content: center;
 }
 .gp-modal {
-  background: rgba(20,20,20,0.95); backdrop-filter: blur(24px);
+  background: var(--bg-elevated); backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 16px; padding: 28px; width: 100%; max-width: 500px;
@@ -324,7 +324,7 @@
 .gp-form-submit {
   flex: 1; padding: 10px;
   background: var(--primary-gradient, linear-gradient(135deg, #4CAF7D, #2E7D5B));
-  color: #0e0e0e; border: none; border-radius: 8px;
+  color: var(--on-accent); border: none; border-radius: 8px;
   font-size: 0.75rem; font-weight: 700; cursor: pointer;
   letter-spacing: 0.06em; font-family: var(--font-sans);
   transition: all 0.15s;

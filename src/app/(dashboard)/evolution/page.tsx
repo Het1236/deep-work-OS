@@ -158,7 +158,7 @@ export default function EvolutionPage() {
         .evo-header { display: flex; align-items: center; justify-content: space-between; }
         .xp-card { background: linear-gradient(135deg, rgba(76,175,125,0.08), rgba(76,175,125,0.02)); border: 1px solid rgba(76,175,125,0.2); border-radius: var(--radius-md); padding: var(--space-2xl); }
         .xp-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-xl); }
-        .xp-level-badge { display: flex; align-items: center; gap: var(--space-sm); background: var(--accent); color: #0F0F0F; padding: var(--space-sm) var(--space-lg); border-radius: var(--radius-full); font-weight: 700; font-size: 0.875rem; }
+        .xp-level-badge { display: flex; align-items: center; gap: var(--space-sm); background: var(--accent); color: var(--on-accent); padding: var(--space-sm) var(--space-lg); border-radius: var(--radius-full); font-weight: 700; font-size: 0.875rem; }
         .xp-progress-row { display: flex; justify-content: space-between; }
         .xp-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-sm); margin-top: var(--space-xl); }
         .xp-action-item { background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: var(--space-sm) var(--space-md); font-size: 0.75rem; color: var(--text-secondary); display: flex; justify-content: space-between; }

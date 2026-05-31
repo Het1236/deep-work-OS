@@ -238,7 +238,7 @@ export default function GroupPage() {
         .lb-rank { font-size: 0.75rem; color: var(--text-tertiary); width: 28px; }
         .lb-row-first .lb-rank { color: var(--accent); font-weight: 700; }
         .lb-av { width: 32px; height: 32px; border-radius: var(--radius-full); background: var(--bg-surface); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.8125rem; color: var(--text-secondary); flex-shrink: 0; }
-        .lb-av-first { background: var(--accent); color: #0F0F0F; }
+        .lb-av-first { background: var(--accent); color: var(--on-accent); }
         .lb-info { flex: 1; }
         .lb-name { font-size: 0.875rem; font-weight: 500; color: var(--text-primary); display: block; }
         .lb-sub { font-size: 0.6875rem; color: var(--text-tertiary); }

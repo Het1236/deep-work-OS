@@ -221,7 +221,7 @@ export default function CalendarPage() {
         .cal-empty { background: var(--bg-base); }
         .cal-today { background: rgba(76,175,125,0.03); }
         .cal-day { font-size: 0.75rem; color: var(--text-tertiary); display: block; margin-bottom: var(--space-xs); }
-        .cal-day-today { color: var(--accent); font-weight: 700; background: var(--accent); color: #0F0F0F; width: 20px; height: 20px; border-radius: var(--radius-full); display: inline-flex; align-items: center; justify-content: center; }
+        .cal-day-today { font-weight: 700; background: var(--accent); color: var(--on-accent); width: 20px; height: 20px; border-radius: var(--radius-full); display: inline-flex; align-items: center; justify-content: center; }
         .cal-blocks { display: flex; flex-direction: column; gap: 2px; }
         .cal-block { font-size: 0.6875rem; padding: 2px 4px; border-radius: 2px; background: var(--bg-surface); border-left: 2px solid transparent; display: flex; justify-content: space-between; }
         .cal-block-title { color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; }
