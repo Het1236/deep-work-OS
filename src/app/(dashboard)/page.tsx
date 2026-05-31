@@ -221,7 +221,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ════════════════ DAILY QUOTE ════════════════ */}
-      <div className="fd-quote card animate-fade-in" style={{ animationDelay: '0.03s', padding: '16px 24px', textAlign: 'center', background: 'rgba(255,255,255,0.01)', borderStyle: 'dashed', borderColor: 'var(--border-subtle)' }}>
+      <div className="fd-quote card animate-fade-in" style={{ animationDelay: '0.03s', padding: '16px 24px', textAlign: 'center', borderStyle: 'dashed', borderColor: 'var(--border-subtle)' }}>
         <p style={{ fontStyle: 'italic', fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
           &ldquo;{quote.text}&rdquo;
         </p>
@@ -427,7 +427,7 @@ export default function DashboardPage() {
             {pinnedWigs.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {pinnedWigs.map(wig => (
-                  <div key={wig.id} style={{ padding: '10px', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                  <div key={wig.id} style={{ padding: '10px', background: 'var(--bg-hover)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                       <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>{wig.title}</span>
                       <span className="text-mono" style={{ fontSize: '0.75rem', color: 'var(--accent)' }}>{wig.progress_pct}%</span>
@@ -589,7 +589,8 @@ export default function DashboardPage() {
 
         /* Timer Card */
         .fd-timer-card {
-          background: rgba(20, 20, 20, 0.6);
+          background: var(--bg-surface-glass);
+          box-shadow: var(--shadow-md);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
           border: 1px solid var(--border-default);
@@ -612,30 +613,31 @@ export default function DashboardPage() {
         .fd-btn-primary {
           display: inline-flex; align-items: center; gap: 8px;
           padding: 13px 36px;
-          background: var(--primary-gradient); color: #0e0e0e;
+          background: var(--primary-gradient); color: var(--on-accent);
           border: none; border-radius: var(--radius-sm);
           font-size: 0.8125rem; font-weight: 700;
           letter-spacing: 0.07em; text-transform: uppercase;
           cursor: pointer; transition: all 0.2s ease;
           font-family: var(--font-sans);
         }
-        .fd-btn-primary:hover { filter: brightness(1.12); box-shadow: 0 0 24px rgba(76,175,125,0.3); }
+        .fd-btn-primary:hover { filter: brightness(1.12); box-shadow: var(--shadow-glow); }
 
         .fd-btn-ghost {
           display: inline-flex; align-items: center; gap: 8px;
           padding: 13px 24px;
-          background: rgba(255,255,255,0.05); color: var(--text-primary);
+          background: var(--bg-hover); color: var(--text-primary);
           border: 1px solid var(--border-default); border-radius: var(--radius-sm);
           font-size: 0.8125rem; font-weight: 600;
           letter-spacing: 0.05em; text-transform: uppercase;
           cursor: pointer; transition: all 0.2s ease;
           font-family: var(--font-sans);
         }
-        .fd-btn-ghost:hover { background: rgba(255,255,255,0.1); border-color: var(--border-hover); }
+        .fd-btn-ghost:hover { background: var(--bg-active); border-color: var(--border-hover); }
 
         /* Intensity Protocol */
         .fd-ip-card {
-          background: rgba(20, 20, 20, 0.6);
+          background: var(--bg-surface-glass);
+          box-shadow: var(--shadow-md);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
           border: 1px solid var(--border-default);
@@ -651,15 +653,15 @@ export default function DashboardPage() {
         .fd-mode {
           display: flex; align-items: center; gap: 10px;
           padding: 11px 14px; border-radius: var(--radius-sm);
-          background: rgba(255,255,255,0.025); border: 1px solid var(--border-subtle);
+          background: var(--bg-hover); border: 1px solid var(--border-subtle);
           color: var(--text-tertiary); cursor: pointer;
           transition: all 0.15s ease; font-family: var(--font-sans);
           font-size: 0.8125rem;
         }
         .fd-mode:hover { border-color: var(--border-hover); color: var(--text-secondary); }
         .fd-mode.active {
-          background: rgba(76,175,125,0.12);
-          border-color: rgba(76,175,125,0.35);
+          background: var(--accent-muted);
+          border-color: var(--accent);
           color: var(--text-primary);
         }
         .fd-mode-name { flex: 1; font-weight: 500; }
@@ -673,7 +675,8 @@ export default function DashboardPage() {
         /* ---- Row 2: Stats ---- */
         .fd-row2 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-lg); }
         .fd-stat-card {
-          background: rgba(20, 20, 20, 0.6);
+          background: var(--bg-surface-glass);
+          box-shadow: var(--shadow-md);
           backdrop-filter: blur(16px);
           -webkit-backdrop-filter: blur(16px);
           border: 1px solid var(--border-default);
@@ -695,7 +698,7 @@ export default function DashboardPage() {
         .fd-progress-wrap { margin: 14px 0 10px; }
         .fd-progress-bar {
           width: 100%; height: 4px;
-          background: rgba(255,255,255,0.06);
+          background: var(--bg-hover);
           border-radius: 2px; overflow: hidden;
         }
         .fd-progress-fill {
@@ -723,7 +726,7 @@ export default function DashboardPage() {
         }
         .fd-bar-col { flex: 1; height: 100%; display: flex; align-items: flex-end; }
         .fd-bar {
-          width: 100%; background: rgba(76,175,125,0.3);
+          width: 100%; background: var(--accent-muted);
           border-radius: 2px; transition: height 0.5s ease; min-height: 3px;
         }
         .fd-bar-last { background: var(--accent) !important; }
@@ -732,7 +735,8 @@ export default function DashboardPage() {
         .fd-row3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-lg); }
         
         .fd-evo-card, .fd-agenda-card, .fd-wigs-card, .fd-env-card-inner {
-          background: rgba(20, 20, 20, 0.6);
+          background: var(--bg-surface-glass);
+          box-shadow: var(--shadow-md);
           backdrop-filter: blur(16px);
           -webkit-backdrop-filter: blur(16px);
           border: 1px solid var(--border-default);
@@ -761,7 +765,7 @@ export default function DashboardPage() {
           color: transparent;
         }
         .fd-habit-done {
-          background: var(--accent); border-color: var(--accent); color: #0e0e0e;
+          background: var(--accent); border-color: var(--accent); color: var(--on-accent);
         }
         .fd-habit-name {
           flex: 1; font-size: 0.8125rem; font-weight: 500;
@@ -809,12 +813,12 @@ export default function DashboardPage() {
           z-index: 100;
         }
         .wrapup-modal {
-          background: rgba(22,22,26,0.82);
-          border: 1px solid rgba(255,255,255,0.08);
+          background: var(--bg-elevated);
+          border: 1px solid var(--border-default);
           border-radius: 20px;
           padding: var(--space-2xl);
           width: 90%; max-width: 520px;
-          box-shadow: 0 16px 64px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
+          box-shadow: var(--shadow-lg);
           backdrop-filter: blur(24px);
           -webkit-backdrop-filter: blur(24px);
         }
@@ -827,7 +831,7 @@ export default function DashboardPage() {
         .wrapup-tasks {
           max-height: 180px; overflow-y: auto;
           display: flex; flex-direction: column; gap: 8px;
-          background: rgba(0,0,0,0.3); padding: 12px;
+          background: var(--bg-base); padding: 12px;
           border-radius: var(--radius-md);
           border: 1px solid var(--border-default);
         }
