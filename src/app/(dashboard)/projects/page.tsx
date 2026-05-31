@@ -1,6 +1,6 @@
 'use client'
 
-import { FolderKanban, Plus, ArrowUpRight, Loader2, X, CheckCircle2, Calendar, Trash2 } from 'lucide-react'
+import { FolderKanban, Plus, ArrowUpRight, Loader2, X, CheckCircle2, Inbox } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@/components/UserContext'
 import {
@@ -75,13 +75,16 @@ export default function ProjectsPage() {
 
   useEffect(() => { loadData() }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Derived: today's tasks = scheduled today, OR unscheduled active, OR captured
-  // (project-less) active "inbox" tasks — so quick captures always surface.
+  // Today = scheduled for today (any status, for the count), OR an unscheduled
+  // task that belongs to a project (active backlog you can pull into today).
   const dailyTasks = allTasks.filter(t =>
     t.scheduled_date === today ||
-    (!t.scheduled_date && t.status !== 'done') ||
-    (!t.project_id && t.status !== 'done')
+    (!t.scheduled_date && !!t.project_id && t.status !== 'done')
   )
+
+  // Inbox = loose captures: active tasks with no project (e.g. logged via Telegram),
+  // waiting to be triaged into a project or scheduled.
+  const inboxTasks = allTasks.filter(t => !t.project_id && t.status !== 'done')
 
   // ─── Handlers ──────────────────────
 
@@ -318,6 +321,49 @@ export default function ProjectsPage() {
           style={{ marginTop: 'var(--space-sm)', background: 'var(--bg-base)' }}
         />
       </div>
+
+      {/* ═══ INBOX (loose / captured tasks) ═══ */}
+      {inboxTasks.length > 0 && (
+        <div className="card animate-fade-in daily-tasks-panel" style={{ animationDelay: '0.04s' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-md)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Inbox size={18} style={{ color: 'var(--accent)' }} />
+              <span style={{ fontWeight: 600, fontSize: '0.9375rem' }}>Inbox</span>
+              <span className="text-mono" style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', background: 'var(--bg-hover)', padding: '2px 8px', borderRadius: '999px' }}>
+                {inboxTasks.length}
+              </span>
+            </div>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Unfiled captures — triage into a project or schedule</span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '220px', overflowY: 'auto' }}>
+            {inboxTasks.map(task => (
+              <div key={task.id} className="daily-task-row">
+                <input
+                  type="checkbox"
+                  checked={task.status === 'done'}
+                  onChange={() => handleToggleTask(task)}
+                  style={{ accentColor: 'var(--accent)', cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '0.8125rem', flex: 1, color: 'var(--text-primary)' }}>
+                  {task.title}
+                </span>
+                <button
+                  className="btn btn-ghost"
+                  style={{ padding: '2px 8px', fontSize: '0.6875rem', color: 'var(--accent)' }}
+                  title="Schedule for today"
+                  onClick={async () => { await updateTask(task.id, { scheduled_date: today }); loadData() }}
+                >
+                  Today
+                </button>
+                <button className="btn btn-ghost" style={{ padding: '2px', color: 'var(--status-danger)', opacity: 0.5 }} onClick={() => handleRemoveTask(task.id)}>
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
 
 
@@ -560,6 +606,10 @@ export default function ProjectsPage() {
         .projects-page { display: flex; flex-direction: column; gap: var(--space-xl); }
         .projects-header { display: flex; align-items: center; justify-content: space-between; }
         .kanban { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-lg); }
+        @media (max-width: 860px) {
+          .kanban { grid-template-columns: 1fr; }
+          .projects-header { flex-wrap: wrap; gap: var(--space-md); }
+        }
         .kanban-col-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-md); padding: var(--space-sm) 0; }
         .kanban-cards { display: flex; flex-direction: column; gap: var(--space-md); }
         .project-card { background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: var(--space-lg); transition: all var(--transition-fast); cursor: pointer; }
