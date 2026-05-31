@@ -22,6 +22,7 @@
     --accent-muted: rgba(150, 250, 194, 0.15);
     --accent-subtle: rgba(150, 250, 194, 0.08);
     --primary-gradient: linear-gradient(135deg, #96fac2, #50b380);
+    --on-accent: #0e0e0e;   /* text/icon color on top of accent fills */
 
     /* ---- Text Hierarchy ---- */
     --text-primary: #E8E8E8;
@@ -58,6 +59,7 @@
     /* ---- Typography ---- */
     --font-sans: 'Manrope', system-ui, -apple-system, sans-serif;
     --font-mono: 'Geist Mono', 'JetBrains Mono', ui-monospace, monospace;
+    --font-display: 'Fraunces', 'Manrope', Georgia, serif;
 
     /* ---- Border Radius ---- */
     --radius-sm: 6px;
@@ -81,7 +83,57 @@
     /* ---- Layout ---- */
     --sidebar-width: 240px;
     --topbar-height: 52px;
+
+    /* ---- Nav surfaces (themed) ---- */
+    --nav-bg: rgba(12, 12, 12, 0.65);
+    --nav-border: rgba(255, 255, 255, 0.06);
   }
+}
+
+/* ============================================
+   Light Theme — "Claude Warm" (ivory + clay)
+   Unlayered so it overrides the layered :root when active.
+   ============================================ */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-base: #F5F1EA;
+  --bg-elevated: #FDFBF7;
+  --bg-surface: #FFFFFF;
+  --bg-surface-glass: rgba(253, 251, 247, 0.72);
+  --bg-hover: #EEE7DA;
+  --bg-active: #E6DCCB;
+  --bg-input: #FFFFFF;
+
+  --accent: #CC785C;
+  --accent-hover: #B5634A;
+  --accent-muted: rgba(204, 120, 92, 0.15);
+  --accent-subtle: rgba(204, 120, 92, 0.07);
+  --primary-gradient: linear-gradient(135deg, #CC785C, #B5634A);
+  --on-accent: #FFFFFF;
+
+  --text-primary: #2A2520;
+  --text-secondary: #5E544A;
+  --text-tertiary: #9A8E7C;
+  --text-disabled: #C7BBA8;
+
+  --border-subtle: rgba(42, 37, 32, 0.08);
+  --border-default: rgba(42, 37, 32, 0.14);
+  --border-hover: rgba(42, 37, 32, 0.26);
+
+  --status-success: #2F8F5B;
+  --status-warning: #C07D14;
+  --status-danger: #C2452F;
+  --status-info: #3F77AE;
+
+  --shadow-sm: 0 1px 2px rgba(60, 48, 36, 0.08);
+  --shadow-md: 0 4px 14px rgba(60, 48, 36, 0.10);
+  --shadow-lg: 0 10px 30px rgba(60, 48, 36, 0.14);
+  --shadow-glow: 0 0 20px rgba(204, 120, 92, 0.18);
+  --shadow-ambient: 0 24px 48px rgba(204, 120, 92, 0.12);
+
+  --nav-bg: rgba(250, 247, 241, 0.78);
+  --nav-border: rgba(42, 37, 32, 0.10);
 }
 
 /* ============================================
@@ -138,13 +190,15 @@ body {
    ============================================ */
 
 .text-display {
+  font-family: var(--font-display);
   font-size: 2rem;
-  font-weight: 700;
-  letter-spacing: -0.04em;
-  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
 }
 
 .text-heading {
+  font-family: var(--font-display);
   font-size: 1.25rem;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -225,7 +279,7 @@ body {
 
 .btn-primary {
   background: var(--primary-gradient);
-  color: #0e0e0e;
+  color: var(--on-accent);
 }
 
 .btn-primary:hover {
@@ -387,6 +441,14 @@ body {
 .main-content > * {
   position: relative;
   z-index: 1;
+}
+
+/* Warm ambient glow for the light theme */
+:root[data-theme="light"] .main-content::before {
+  background:
+    radial-gradient(ellipse 800px 500px at 8% 5%, rgba(204, 120, 92, 0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 500px 400px at 85% 90%, rgba(204, 120, 92, 0.05) 0%, transparent 70%),
+    radial-gradient(ellipse 600px 350px at 45% 40%, rgba(181, 99, 74, 0.03) 0%, transparent 60%);
 }
 
 /* ============================================

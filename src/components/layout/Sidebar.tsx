@@ -50,6 +50,7 @@ export default function Sidebar() {
               key={item.href}
               href={item.href}
               className={`sb-link${isActive ? ' sb-link--active' : ''}`}
+              onClick={() => document.documentElement.classList.remove('nav-open')}
             >
               <Icon size={16} strokeWidth={isActive ? 2.5 : 1.8} className="sb-link-icon" />
               {item.label}
@@ -73,10 +74,10 @@ export default function Sidebar() {
           width: var(--sidebar-width);
           min-width: var(--sidebar-width);
           height: 100vh;
-          background: rgba(10, 10, 10, 0.6);
+          background: var(--nav-bg);
           backdrop-filter: blur(36px) saturate(1.3);
           -webkit-backdrop-filter: blur(36px) saturate(1.3);
-          border-right: 1px solid rgba(255, 255, 255, 0.06);
+          border-right: 1px solid var(--nav-border);
           display: flex;
           flex-direction: column;
           z-index: 20;
@@ -245,6 +246,22 @@ export default function Sidebar() {
           filter: brightness(1.1);
           box-shadow: 0 4px 24px rgba(150, 250, 194, 0.25);
           transform: translateY(-1px);
+        }
+
+        /* ---- Mobile: off-canvas drawer ---- */
+        @media (max-width: 860px) {
+          .sb {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 60;
+            transform: translateX(-100%);
+            transition: transform 0.25s ease;
+          }
+          :root.nav-open .sb {
+            transform: none;
+            box-shadow: var(--shadow-lg);
+          }
         }
       `}</style>
     </aside>
