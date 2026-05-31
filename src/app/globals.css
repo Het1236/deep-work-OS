@@ -97,43 +97,44 @@
 :root[data-theme="light"] {
   color-scheme: light;
 
-  --bg-base: #F5F1EA;
-  --bg-elevated: #FDFBF7;
+  /* Ivory page, bright-white cards for depth, deep warm text for contrast */
+  --bg-base: #F1EADB;
+  --bg-elevated: #FFFFFF;
   --bg-surface: #FFFFFF;
-  --bg-surface-glass: rgba(253, 251, 247, 0.72);
-  --bg-hover: #EEE7DA;
-  --bg-active: #E6DCCB;
+  --bg-surface-glass: rgba(255, 255, 255, 0.82);
+  --bg-hover: #E7DEC9;
+  --bg-active: #DDD1B6;
   --bg-input: #FFFFFF;
 
-  --accent: #CC785C;
-  --accent-hover: #B5634A;
-  --accent-muted: rgba(204, 120, 92, 0.15);
-  --accent-subtle: rgba(204, 120, 92, 0.07);
-  --primary-gradient: linear-gradient(135deg, #CC785C, #B5634A);
+  --accent: #C5613F;
+  --accent-hover: #A94E30;
+  --accent-muted: rgba(197, 97, 63, 0.16);
+  --accent-subtle: rgba(197, 97, 63, 0.08);
+  --primary-gradient: linear-gradient(135deg, #C5613F, #A94E30);
   --on-accent: #FFFFFF;
 
-  --text-primary: #2A2520;
-  --text-secondary: #5E544A;
-  --text-tertiary: #9A8E7C;
-  --text-disabled: #C7BBA8;
+  --text-primary: #1F1810;
+  --text-secondary: #4A3F32;
+  --text-tertiary: #837763;
+  --text-disabled: #B6A98F;
 
-  --border-subtle: rgba(42, 37, 32, 0.08);
-  --border-default: rgba(42, 37, 32, 0.14);
-  --border-hover: rgba(42, 37, 32, 0.26);
+  --border-subtle: rgba(38, 28, 16, 0.10);
+  --border-default: rgba(38, 28, 16, 0.18);
+  --border-hover: rgba(38, 28, 16, 0.34);
 
-  --status-success: #2F8F5B;
-  --status-warning: #C07D14;
-  --status-danger: #C2452F;
-  --status-info: #3F77AE;
+  --status-success: #287A4B;
+  --status-warning: #B06E0C;
+  --status-danger: #B23A26;
+  --status-info: #356BA0;
 
-  --shadow-sm: 0 1px 2px rgba(60, 48, 36, 0.08);
-  --shadow-md: 0 4px 14px rgba(60, 48, 36, 0.10);
-  --shadow-lg: 0 10px 30px rgba(60, 48, 36, 0.14);
-  --shadow-glow: 0 0 20px rgba(204, 120, 92, 0.18);
-  --shadow-ambient: 0 24px 48px rgba(204, 120, 92, 0.12);
+  --shadow-sm: 0 1px 2px rgba(50, 38, 22, 0.10);
+  --shadow-md: 0 4px 16px rgba(50, 38, 22, 0.14);
+  --shadow-lg: 0 12px 32px rgba(50, 38, 22, 0.20);
+  --shadow-glow: 0 0 20px rgba(197, 97, 63, 0.20);
+  --shadow-ambient: 0 24px 48px rgba(197, 97, 63, 0.14);
 
-  --nav-bg: rgba(250, 247, 241, 0.78);
-  --nav-border: rgba(42, 37, 32, 0.10);
+  --nav-bg: rgba(241, 234, 219, 0.88);
+  --nav-border: rgba(38, 28, 16, 0.14);
 }
 
 /* ============================================
