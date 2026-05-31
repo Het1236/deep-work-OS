@@ -13,6 +13,7 @@ import {
   Loader2, Shield, ArrowRight, Coffee, Brain, SkipForward, Trash2, Clock, Sparkles
 } from 'lucide-react'
 import { useTimerStore } from '@/stores/timerStore'
+import AICoachCard from '@/components/AICoachCard'
 
 const DEEP_WORK_QUOTES = [
   { text: "Who you are, what you think, what you do, what you love—this is what your life is made of.", author: "Cal Newport" },
@@ -229,6 +230,9 @@ export default function DashboardPage() {
           — {quote.author}
         </span>
       </div>
+
+      {/* ════════════════ AI COACH ════════════════ */}
+      <AICoachCard />
 
       {/* ════════════════ TIMER + INTENSITY ════════════════ */}
       <div className="fd-row1 animate-fade-in" style={{ animationDelay: '0.06s' }}>
