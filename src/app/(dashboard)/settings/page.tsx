@@ -1,10 +1,11 @@
 'use client'
 
-import { Settings, Moon, Bell, User, Shield, Palette, Save, Loader2, Check } from 'lucide-react'
+import { Settings, Bell, User, Shield, Palette, Save, Loader2, Check } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@/components/UserContext'
 import { getProfile, updateProfile } from '@/lib/data'
 import type { Profile } from '@/lib/types'
+import TelegramConnect from './TelegramConnect'
 
 export default function SettingsPage() {
   const { userId } = useUser()
@@ -145,6 +146,9 @@ export default function SettingsPage() {
           <button className="btn btn-secondary" style={{ width: '100%' }}>Change Password</button>
           <button className="btn btn-ghost" style={{ width: '100%', marginTop: '8px', color: 'var(--status-danger)' }}>Delete Account</button>
         </div>
+
+        {/* Telegram Capture */}
+        <TelegramConnect />
       </div>
 
       <style jsx>{`
