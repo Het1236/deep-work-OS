@@ -1,7 +1,7 @@
 import type { AIMessage, AICompletionOptions, AIProvider } from './types'
 import { AINotConfiguredError } from './types'
 
-const MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash'
+const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
 
 export function createGeminiProvider(): AIProvider {
   const key = process.env.GEMINI_API_KEY
