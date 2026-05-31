@@ -90,7 +90,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-hover);
   margin-bottom: 4px;
 }
 
@@ -326,7 +326,7 @@
 
 .bg-btn--primary {
   background: var(--primary-gradient);
-  color: #0e0e0e;
+  color: var(--on-accent);
   border: none;
   box-shadow: 0 2px 12px rgba(150, 250, 194, 0.15);
 }
@@ -471,7 +471,7 @@
   height: 16px;
   border-radius: var(--radius-sm);
   flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--border-hover);
 }
 
 .bg-palette { display: flex; gap: 6px; flex-wrap: wrap; }
