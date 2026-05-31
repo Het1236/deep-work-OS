@@ -1,6 +1,6 @@
 'use client'
 
-import { Search, Settings, Sun, Moon, Menu } from 'lucide-react'
+import { Search, Settings, Sun, Moon, Menu, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -13,6 +13,9 @@ function openPalette() {
 }
 function toggleNav() {
   document.documentElement.classList.toggle('nav-open')
+}
+function openCapture() {
+  window.dispatchEvent(new Event('lifeos:capture'))
 }
 function closeNav() {
   document.documentElement.classList.remove('nav-open')
@@ -56,6 +59,7 @@ export default function Topbar() {
         </button>
 
         <div className="topbar-actions">
+          <button className="topbar-icon-btn topbar-capture" title="Quick capture (Ctrl/⌘ J)" onClick={openCapture}><Sparkles size={18} /></button>
           <button className="topbar-icon-btn" title="Toggle theme" onClick={toggleTheme}>
             {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
           </button>
@@ -132,6 +136,8 @@ export default function Topbar() {
           cursor: pointer; transition: all 0.15s ease;
         }
         .topbar-icon-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .topbar-capture { color: var(--accent); }
+        .topbar-capture:hover { color: var(--accent); background: var(--accent-muted); }
         .topbar-avatar {
           width: 32px; height: 32px;
           border-radius: var(--radius-full);
