@@ -6,7 +6,7 @@ import { useTheme } from '@/components/ThemeProvider'
 import {
   LayoutDashboard, Trophy, Brain, CheckCircle2, FolderKanban, Target, BookOpen,
   Calendar, ClipboardList, Timer, Wallet, Database, Sparkles, Users, Settings,
-  Sun, Moon, Plus, Search,
+  Sun, Moon, Plus, Search, Activity,
 } from 'lucide-react'
 
 type Item = { label: string; href?: string; action?: () => void; icon: React.ElementType; keywords?: string }
@@ -21,6 +21,7 @@ export default function CommandPalette() {
 
   const items: Item[] = useMemo(() => [
     { label: 'Dashboard', href: '/', icon: LayoutDashboard },
+    { label: 'Life Insights', href: '/life', icon: Activity, keywords: 'score correlations timeline' },
     { label: 'Scoreboard', href: '/scoreboard', icon: Trophy },
     { label: 'Evolution', href: '/evolution', icon: Brain },
     { label: 'Habits', href: '/habits', icon: CheckCircle2 },

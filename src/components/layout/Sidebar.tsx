@@ -5,11 +5,12 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Trophy, Brain, CheckCircle2,
   FolderKanban, Target, BookOpen, Calendar,
-  Sparkles, Users, Zap, Timer, Database, Plus, ClipboardList, Wallet, Settings
+  Sparkles, Users, Zap, Timer, Database, Plus, ClipboardList, Wallet, Settings, Activity
 } from 'lucide-react'
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
+  { icon: Activity, label: 'Life Insights', href: '/life' },
   { icon: Trophy, label: 'Scoreboard', href: '/scoreboard' },
   { icon: Brain, label: 'Evolution', href: '/evolution' },
   { icon: CheckCircle2, label: 'Habits', href: '/habits' },
