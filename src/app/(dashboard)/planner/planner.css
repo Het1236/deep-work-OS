@@ -21,11 +21,11 @@
 }
 .pl-nav { display: flex; align-items: center; gap: 8px; }
 .nav-btn {
-  background: rgba(255,255,255,0.04); border: 1px solid var(--border-default);
+  background: var(--bg-hover); border: 1px solid var(--border-default);
   border-radius: var(--radius-sm); padding: 8px; cursor: pointer;
   color: var(--text-secondary); transition: all 0.15s;
 }
-.nav-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+.nav-btn:hover { background: var(--bg-active); color: var(--text-primary); }
 .nav-center {
   display: flex; flex-direction: column; align-items: center;
   min-width: 180px; gap: 2px;
@@ -120,7 +120,7 @@
 }
 .slot-dur {
   font-size: 0.625rem; color: var(--text-tertiary);
-  background: rgba(255,255,255,0.06);
+  background: var(--bg-hover);
   padding: 2px 8px; border-radius: 3px;
   font-family: var(--font-mono, monospace);
 }
@@ -201,7 +201,7 @@
   display: flex; flex-direction: column; gap: 10px;
 }
 .sf-input {
-  background: rgba(255,255,255,0.05);
+  background: var(--bg-hover);
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 8px; padding: 10px 14px;
   color: var(--text-primary); font-size: 0.8125rem;
@@ -213,21 +213,21 @@
 .sf-input::placeholder { color: var(--text-tertiary); }
 
 .sf-sel {
-  background: rgba(255,255,255,0.05);
+  background: var(--bg-hover);
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 8px; padding: 9px 12px;
   color: var(--text-primary); font-size: 0.75rem;
   font-family: var(--font-sans); outline: none;
   cursor: pointer; width: 100%; box-sizing: border-box;
 }
-.sf-sel option { background: #1a1a1a; color: #e0e0e0; }
+.sf-sel option { background: var(--bg-elevated); color: var(--text-primary); }
 
 /* Type chips */
 .sf-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .sf-chip {
   font-size: 0.625rem; font-weight: 600; letter-spacing: 0.04em;
   padding: 6px 14px; border-radius: 6px;
-  background: rgba(255,255,255,0.04);
+  background: var(--bg-hover);
   border: 1px solid rgba(255,255,255,0.1);
   color: var(--text-tertiary); cursor: pointer;
   transition: all 0.15s; font-family: var(--font-sans);
@@ -261,7 +261,7 @@
 }
 .sf-cancel {
   display: inline-flex; align-items: center; gap: 4px;
-  padding: 10px 14px; background: rgba(255,255,255,0.04);
+  padding: 10px 14px; background: var(--bg-hover);
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 8px;
   color: var(--text-secondary); font-size: 0.75rem; cursor: pointer;
