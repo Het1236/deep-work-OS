@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import type { FinanceAccount, FinanceCategory, RecurringRule, RecurringFrequency } from '@/lib/types'
 import { getRecurringRules, createRecurringRule, deleteRecurringRule } from '@/lib/data'
 import { formatINR } from '@/lib/finance'
@@ -69,7 +70,7 @@ export default function RecurringDrawer({
     onChanged()
   }
 
-  return (
+  return createPortal(
     <div className="bg-overlay" style={{ padding: 0, justifyContent: 'flex-end' }} onClick={onClose}>
       <div className="bg-drawer" onClick={e => e.stopPropagation()}>
         <div className="bg-drawer-head">
@@ -134,6 +135,7 @@ export default function RecurringDrawer({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

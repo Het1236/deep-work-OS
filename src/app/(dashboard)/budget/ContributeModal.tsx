@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import type { SavingsGoalStatus } from '@/lib/types'
 import { addContribution, awardXP } from '@/lib/data'
 import { useXPToast } from '@/components/XPToast'
@@ -54,7 +55,7 @@ export default function ContributeModal({
     }
   }
 
-  return (
+  return createPortal(
     <div className="bg-overlay" onClick={onClose}>
       <div className="bg-modal" onClick={e => e.stopPropagation()}>
         <div className="bg-modal-head">
@@ -86,6 +87,7 @@ export default function ContributeModal({
           <button className="bg-btn bg-btn--primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Add money'}</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

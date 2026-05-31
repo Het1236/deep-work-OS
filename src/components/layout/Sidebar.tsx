@@ -100,12 +100,12 @@ export default function Sidebar() {
           height: 36px;
           min-width: 36px;
           border-radius: 10px;
-          background: linear-gradient(135deg, #96fac2, #50b380);
+          background: var(--primary-gradient);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #0e0e0e;
-          box-shadow: 0 0 16px rgba(150, 250, 194, 0.2), 0 2px 6px rgba(0,0,0,0.3);
+          color: var(--on-accent);
+          box-shadow: var(--shadow-glow), var(--shadow-sm);
         }
 
         .sb-logo-text {
@@ -176,13 +176,11 @@ export default function Sidebar() {
 
         /* ---- ACTIVE STATE — Glass Highlight ---- */
         .sb-link--active {
-          background: rgba(150, 250, 194, 0.1) !important;
-          border: 1px solid rgba(150, 250, 194, 0.18) !important;
-          color: #96fac2 !important;
+          background: color-mix(in srgb, var(--accent) 12%, transparent) !important;
+          border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent) !important;
+          color: var(--accent) !important;
           font-weight: 600;
-          box-shadow:
-            0 0 20px rgba(150, 250, 194, 0.08),
-            inset 0 0 12px rgba(150, 250, 194, 0.04);
+          box-shadow: inset 0 0 12px color-mix(in srgb, var(--accent) 8%, transparent);
         }
 
         .sb-link--active::before {
@@ -194,18 +192,18 @@ export default function Sidebar() {
           width: 3px;
           height: 55%;
           border-radius: 0 3px 3px 0;
-          background: linear-gradient(180deg, #96fac2, #50b380);
-          box-shadow: 0 0 10px rgba(150, 250, 194, 0.4);
+          background: var(--primary-gradient);
+          box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 40%, transparent);
         }
 
         .sb-link--active .sb-link-icon {
-          color: #96fac2;
-          filter: drop-shadow(0 0 5px rgba(150, 250, 194, 0.4));
+          color: var(--accent);
+          filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 40%, transparent));
         }
 
         .sb-link--active:hover {
-          background: rgba(150, 250, 194, 0.14) !important;
-          border-color: rgba(150, 250, 194, 0.24) !important;
+          background: color-mix(in srgb, var(--accent) 16%, transparent) !important;
+          border-color: color-mix(in srgb, var(--accent) 30%, transparent) !important;
         }
 
         /* ---- Bottom CTA ---- */
@@ -222,8 +220,8 @@ export default function Sidebar() {
           gap: 8px !important;
           width: 100%;
           padding: 11px 16px;
-          background: linear-gradient(135deg, #96fac2, #50b380);
-          color: #0e0e0e;
+          background: var(--primary-gradient);
+          color: var(--on-accent);
           border: none;
           border-radius: 10px;
           font-size: 0.6875rem;
@@ -233,7 +231,7 @@ export default function Sidebar() {
           text-decoration: none;
           cursor: pointer;
           transition: all 0.25s ease;
-          box-shadow: 0 2px 12px rgba(150, 250, 194, 0.15);
+          box-shadow: var(--shadow-glow);
         }
 
         .sb-cta-icon {
@@ -243,8 +241,8 @@ export default function Sidebar() {
         }
 
         .sb-cta:hover {
-          filter: brightness(1.1);
-          box-shadow: 0 4px 24px rgba(150, 250, 194, 0.25);
+          filter: brightness(1.05);
+          box-shadow: var(--shadow-glow);
           transform: translateY(-1px);
         }
 

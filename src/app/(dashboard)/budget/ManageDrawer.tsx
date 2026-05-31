@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { FinanceAccount, FinanceCategory } from '@/lib/types'
 import {
   createAccount, updateAccount, deleteAccount,
@@ -62,7 +63,7 @@ export default function ManageDrawer({
   const expenseCats = categories.filter(c => c.kind === 'expense')
   const incomeCats = categories.filter(c => c.kind === 'income')
 
-  return (
+  return createPortal(
     <div className="bg-overlay" style={{ padding: 0, justifyContent: 'flex-end' }} onClick={onClose}>
       <div className="bg-drawer" onClick={e => e.stopPropagation()}>
         <div className="bg-drawer-head">
@@ -156,6 +157,7 @@ export default function ManageDrawer({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

@@ -394,14 +394,20 @@
 .bg-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  z-index: 100;
+  background: rgba(10, 8, 6, 0.42);
+  backdrop-filter: blur(8px) saturate(1.1);
+  -webkit-backdrop-filter: blur(8px) saturate(1.1);
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--space-lg);
+  animation: bgOverlayIn 0.2s ease both;
 }
+
+@keyframes bgOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes bgModalIn { from { opacity: 0; transform: translateY(12px) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes bgDrawerIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
 .bg-modal {
   background: var(--bg-elevated);
@@ -412,6 +418,7 @@
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: var(--shadow-lg);
+  animation: bgModalIn 0.24s cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
 
 .bg-drawer {
@@ -423,6 +430,7 @@
   margin-left: auto;
   overflow-y: auto;
   box-shadow: var(--shadow-lg);
+  animation: bgDrawerIn 0.26s cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
 
 .bg-modal-head, .bg-drawer-head {

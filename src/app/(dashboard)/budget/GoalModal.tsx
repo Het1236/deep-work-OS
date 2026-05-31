@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import type { SavingsGoalStatus } from '@/lib/types'
 import { createSavingsGoal, updateSavingsGoal } from '@/lib/data'
 import { X } from 'lucide-react'
@@ -63,7 +64,7 @@ export default function GoalModal({
     }
   }
 
-  return (
+  return createPortal(
     <div className="bg-overlay" onClick={onClose}>
       <div className="bg-modal" onClick={e => e.stopPropagation()}>
         <div className="bg-modal-head">
@@ -102,6 +103,7 @@ export default function GoalModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

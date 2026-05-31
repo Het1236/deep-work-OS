@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import type { FinanceAccount, FinanceCategory, Transaction } from '@/lib/types'
 import { createTransaction, updateTransaction, isFirstLogToday, awardXP } from '@/lib/data'
 import { useXPToast } from '@/components/XPToast'
@@ -103,7 +104,7 @@ export default function TransactionModal({
 
   const types: TxnType[] = ['expense', 'income', 'transfer']
 
-  return (
+  return createPortal(
     <div className="bg-overlay" onClick={onClose}>
       <div className="bg-modal" onClick={e => e.stopPropagation()}>
         <div className="bg-modal-head">
@@ -181,6 +182,7 @@ export default function TransactionModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
