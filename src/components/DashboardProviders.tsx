@@ -3,6 +3,7 @@
 import { XPToastProvider } from '@/components/XPToast'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import CommandPalette from '@/components/CommandPalette'
+import QuickCapture from '@/components/QuickCapture'
 
 export default function DashboardProviders({ children }: { children: React.ReactNode }) {
   return (
@@ -10,6 +11,7 @@ export default function DashboardProviders({ children }: { children: React.React
       <XPToastProvider>
         {children}
         <CommandPalette />
+        <QuickCapture />
       </XPToastProvider>
     </ThemeProvider>
   )
