@@ -28,15 +28,18 @@ async function awardXp(admin: Admin, userId: string, eventType: string, xp: numb
 }
 
 async function loadContext(admin: Admin, userId: string): Promise<CaptureContext> {
-  const [cats, wallets, habits] = await Promise.all([
+  const [cats, wallets, habits, projects] = await Promise.all([
     admin.from('finance_categories').select('id,name,kind').eq('user_id', userId).eq('is_archived', false),
     admin.from('finance_accounts').select('id,name').eq('user_id', userId).eq('is_active', true),
     admin.from('habits').select('id,name').eq('user_id', userId).eq('is_active', true),
+    admin.from('projects').select('id,title').eq('user_id', userId).neq('status', 'archived'),
   ])
   return {
     categories: (cats.data || []) as CaptureContext['categories'],
     wallets: (wallets.data || []) as CaptureContext['wallets'],
     habits: (habits.data || []) as CaptureContext['habits'],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    projects: ((projects.data || []) as any[]).map(p => ({ id: p.id, name: p.title })),
   }
 }
 
@@ -78,15 +81,20 @@ async function handleCapture(admin: Admin, userId: string, chatId: number, text:
   }
 
   if (intent.module === 'task') {
+    const project = intent.projectName
+      ? ctx.projects.find(p => p.name.toLowerCase() === intent.projectName!.toLowerCase() || p.name.toLowerCase().includes(intent.projectName!.toLowerCase()) || intent.projectName!.toLowerCase().includes(p.name.toLowerCase()))
+      : undefined
     const { data, error } = await admin.from('tasks').insert({
       user_id: userId,
       title: intent.title,
       status: 'todo',
       priority: 0,
+      project_id: project?.id ?? null,
       scheduled_date: intent.scheduledDate,
     }).select('id').single()
     if (error || !data) { await sendMessage(chatId, '⚠️ Could not save that task.'); return }
-    await sendMessage(chatId, `📋 Task added: <b>${escapeHtml(intent.title)}</b>${intent.scheduledDate ? ` (${intent.scheduledDate})` : ''}`, undoButton('task', data.id))
+    const extra = [project ? `→ ${project.name}` : '', intent.scheduledDate ? `(${intent.scheduledDate})` : ''].filter(Boolean).join(' ')
+    await sendMessage(chatId, `📋 Task added: <b>${escapeHtml(intent.title)}</b>${extra ? ` ${escapeHtml(extra)}` : ''}`, undoButton('task', data.id))
     return
   }
 
