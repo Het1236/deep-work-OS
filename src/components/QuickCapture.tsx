@@ -3,25 +3,34 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useUser } from '@/components/UserContext'
-import { Sparkles, Loader2, AlertCircle, CornerDownLeft, Wallet, ListTodo, BookOpen, Flame, HelpCircle } from 'lucide-react'
+import {
+  Sparkles, Loader2, AlertCircle, CornerDownLeft, Wallet, ListTodo, BookOpen, Flame,
+  HelpCircle, ArrowLeftRight, PiggyBank, Target, FolderPlus,
+} from 'lucide-react'
 
-type ApiResult = { ok: boolean; module: string; detail: string } | { error: string }
+type ApiResp = { ok: boolean; results: { ok: boolean; module: string; detail: string }[] } | { error: string }
 type HistItem = { id: number; module: string; detail: string; ok: boolean }
 
 const MODULE_META: Record<string, { label: string; color: string; Icon: React.ElementType }> = {
   budget: { label: 'Budget', color: '#E89B5D', Icon: Wallet },
+  transfer: { label: 'Transfer', color: '#5DC9E8', Icon: ArrowLeftRight },
   task: { label: 'Task', color: '#5B9BD5', Icon: ListTodo },
   journal: { label: 'Journal', color: '#9B7EDE', Icon: BookOpen },
   habit: { label: 'Habit', color: '#4CAF7D', Icon: Flame },
+  savings: { label: 'Savings', color: '#4CAF7D', Icon: PiggyBank },
+  budget_set: { label: 'Budget set', color: '#E89B5D', Icon: Wallet },
+  new_project: { label: 'Project', color: '#5B9BD5', Icon: FolderPlus },
+  new_goal: { label: 'Goal', color: '#F5A623', Icon: Target },
   unknown: { label: 'Unclear', color: 'var(--text-tertiary)', Icon: HelpCircle },
 }
 
 const EXAMPLES = [
-  '120 chai',
-  'task: fix login bug for Website',
-  'done gym',
-  'got 5000 allowance',
-  'journal: shipped a lot today',
+  'allowance 500, 120 chai both from cash',
+  'add "design logo" to Website project',
+  'move 1000 from Bank to Cash',
+  'add 500 to Goa trip',
+  'budget 3000 for Food',
+  'done gym, journal: great day',
 ]
 
 export default function QuickCapture() {
@@ -57,13 +66,14 @@ export default function QuickCapture() {
       const res = await fetch('/api/capture', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: v }),
       })
-      const data: ApiResult = await res.json()
+      const data: ApiResp = await res.json()
       if (!res.ok || 'error' in data) {
         setError(('error' in data && data.error) ? data.error : 'Something went wrong')
         setBusy(false)
         return
       }
-      setHistory(h => [{ id: ++seq.current, module: data.module, detail: data.detail, ok: data.ok }, ...h].slice(0, 6))
+      const items = (data.results || []).map(r => ({ id: ++seq.current, module: r.module, detail: r.detail, ok: r.ok }))
+      setHistory(h => [...items.reverse(), ...h].slice(0, 8))
       setText('')
       if (data.ok) triggerRefresh?.()
       setBusy(false)
