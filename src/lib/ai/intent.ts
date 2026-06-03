@@ -5,67 +5,70 @@ export type CaptureContext = {
   wallets: { id: string; name: string }[]
   habits: { id: string; name: string }[]
   projects: { id: string; name: string }[]
+  savingsGoals: { id: string; name: string }[]
 }
 
-export type CaptureIntent =
+export type CaptureAction =
   | { module: 'budget'; type: 'expense' | 'income'; amount: number; categoryName: string | null; walletName: string | null; note: string | null }
+  | { module: 'transfer'; amount: number; fromWallet: string | null; toWallet: string | null; note: string | null }
   | { module: 'task'; title: string; projectName: string | null; scheduledDate: string | null }
   | { module: 'journal'; text: string }
   | { module: 'habit'; habitName: string }
+  | { module: 'savings'; goalName: string | null; amount: number; note: string | null }
+  | { module: 'budget_set'; categoryName: string | null; amount: number }
+  | { module: 'new_project'; title: string }
+  | { module: 'new_goal'; title: string; targetAmount: number | null; targetDate: string | null }
   | { module: 'unknown'; reason: string }
 
-function regexFallback(message: string): CaptureIntent | null {
+function regexFallback(message: string): CaptureAction[] | null {
   const m = message.trim().match(/^(\d+(?:\.\d+)?)\s+(.+)$/)
-  if (m) {
-    return { module: 'budget', type: 'expense', amount: parseFloat(m[1]), categoryName: null, walletName: null, note: m[2].trim() }
-  }
+  if (m) return [{ module: 'budget', type: 'expense', amount: parseFloat(m[1]), categoryName: null, walletName: null, note: m[2].trim() }]
   return null
 }
 
-// Parses a free-text phone message into a structured capture intent.
-export async function parseCapture(message: string, ctx: CaptureContext): Promise<CaptureIntent> {
+// Parses a free-text message (possibly several actions) into structured actions.
+export async function parseCapture(message: string, ctx: CaptureContext): Promise<CaptureAction[]> {
   const today = new Date().toISOString().split('T')[0]
   const cats = ctx.categories.map((c) => `${c.name} (${c.kind})`).join(', ') || 'none'
   const wallets = ctx.wallets.map((w) => w.name).join(', ') || 'none'
   const habits = ctx.habits.map((h) => h.name).join(', ') || 'none'
   const projects = ctx.projects.map((p) => p.name).join(', ') || 'none'
+  const goals = ctx.savingsGoals.map((g) => g.name).join(', ') || 'none'
 
-  const prompt = `You convert a short personal message into ONE structured JSON action for a life-tracking app.
+  const prompt = `You turn a personal message (which may contain MULTIPLE actions) into a JSON array of structured actions for a life-tracking app.
 Today is ${today}.
 
 The user's EXPENSE/INCOME categories: ${cats}
 The user's wallets: ${wallets}
 The user's habits: ${habits}
 The user's projects: ${projects}
+The user's savings goals: ${goals}
 
-Decide which module the message belongs to and return ONLY this JSON shape (no prose):
-{
-  "module": "budget" | "task" | "journal" | "habit" | "unknown",
-  // budget:
-  "type": "expense" | "income",
-  "amount": number,
-  "categoryName": string | null,   // MUST be one of the user's categories above, or null
-  "walletName": string | null,     // MUST be one of the user's wallets above, or null
-  "note": string | null,
-  // task:
-  "title": string,
-  "projectName": string | null,    // MUST be one of the user's projects above, or null
-  "scheduledDate": "YYYY-MM-DD" | null,
-  // journal:
-  "text": string,
-  // habit:
-  "habitName": string,             // MUST be one of the user's habits above
-  // unknown:
-  "reason": string
-}
+Return ONLY this JSON object (no prose): { "actions": [ <action>, ... ] }
+Each <action> is exactly ONE of these shapes:
+{ "module":"budget", "type":"expense"|"income", "amount":number, "categoryName":string|null, "walletName":string|null, "note":string|null }
+{ "module":"transfer", "amount":number, "fromWallet":string|null, "toWallet":string|null, "note":string|null }
+{ "module":"task", "title":string, "projectName":string|null, "scheduledDate":"YYYY-MM-DD"|null }
+{ "module":"journal", "text":string }
+{ "module":"habit", "habitName":string }
+{ "module":"savings", "goalName":string|null, "amount":number, "note":string|null }
+{ "module":"budget_set", "categoryName":string|null, "amount":number }
+{ "module":"new_project", "title":string }
+{ "module":"new_goal", "title":string, "targetAmount":number|null, "targetDate":"YYYY-MM-DD"|null }
+{ "module":"unknown", "reason":string }
 
 Rules:
-- Money like "120 chai", "spent 50 on bus", "got 5000 allowance" => budget. Default type is expense; "got/received/earned/allowance/salary" => income.
-- Pick the closest matching categoryName/walletName from the lists; if none fits, use null.
-- "remind me", "task:", "todo", "add ... to <project>" => task. If the user names a project (e.g. "add X to Website project", "for Thesis"), set projectName to the closest matching project from the list above; otherwise projectName MUST be null. Set scheduledDate ONLY if the user explicitly names a day or date (e.g. "tomorrow", "Monday", "June 2"); otherwise scheduledDate MUST be null.
-- "journal:", "today i", feelings/reflections => journal (put the full text in "text").
-- "done <habit>", "did <habit>", marking a habit done => habit (set habitName to the closest habit).
-- Only include fields relevant to the chosen module; others may be omitted.
+- SPLIT compound messages into multiple actions. Example: "allowance 500 from father, 420 fuel both from cash" => [ {budget income 500, categoryName closest to "Allowance", walletName "Cash", note "from father"}, {budget expense 420, categoryName closest to "Fuel"/"Travel", walletName "Cash", note "fuel"} ]. Apply shared context (e.g. "both from cash") to EVERY money action it refers to.
+- categoryName / walletName / projectName / goalName / habitName MUST be the closest match from the user's lists above, or null if nothing fits.
+- Money: bare "120 chai" or "spent/paid/bought" => expense; "got/received/earned/allowance/salary/income/refund" => income.
+- "move/transfer X from A to B" => transfer.
+- "save/put/add X to <goal>" or "<goal> 500" => savings (contribute to a savings goal).
+- "set budget"/"budget 3000 for Food" => budget_set.
+- "new project"/"start project X" => new_project. "new goal"/"save for X" that names a TARGET amount => new_goal.
+- "task:"/"todo"/"remind me"/"add ... to <project>" => task. projectName only if a project is named; scheduledDate only if an explicit day/date is named (e.g. "tomorrow", "Monday", "June 2"), else null.
+- "journal:"/"today i"/reflections => journal. "done <habit>"/"did <habit>" => habit.
+- If a part is truly unclear, emit one { "module":"unknown", "reason": "..." } for it.
+Output ONLY the JSON object.
 
 Message: "${message.replace(/"/g, "'")}"`
 
@@ -75,14 +78,15 @@ Message: "${message.replace(/"/g, "'")}"`
         { role: 'system', content: 'You output only valid minified JSON. No markdown, no commentary.' },
         { role: 'user', content: prompt },
       ],
-      { json: true, temperature: 0.1, maxTokens: 300 }
+      { json: true, temperature: 0.1, maxTokens: 800 }
     )
-    const parsed = JSON.parse(out) as CaptureIntent
-    if (parsed && typeof parsed === 'object' && 'module' in parsed) return parsed
-    throw new Error('malformed intent')
+    const parsed = JSON.parse(out)
+    const actions = Array.isArray(parsed) ? parsed : parsed?.actions
+    if (Array.isArray(actions) && actions.length > 0) return actions as CaptureAction[]
+    throw new Error('no actions')
   } catch {
     const fb = regexFallback(message)
     if (fb) return fb
-    return { module: 'unknown', reason: 'Could not understand the message.' }
+    return [{ module: 'unknown', reason: 'Could not understand the message.' }]
   }
 }
