@@ -31,15 +31,18 @@ export async function POST(request: Request) {
   if (!text) return NextResponse.json({ error: 'Empty input' }, { status: 400 })
 
   // Load the user's context so the model maps to their real records.
-  const [cats, wallets, habits] = await Promise.all([
+  const [cats, wallets, habits, projects] = await Promise.all([
     supabase.from('finance_categories').select('id,name,kind').eq('user_id', userId).eq('is_archived', false),
     supabase.from('finance_accounts').select('id,name').eq('user_id', userId).eq('is_active', true),
     supabase.from('habits').select('id,name').eq('user_id', userId).eq('is_active', true),
+    supabase.from('projects').select('id,title').eq('user_id', userId).neq('status', 'archived'),
   ])
   const ctx: CaptureContext = {
     categories: (cats.data || []) as CaptureContext['categories'],
     wallets: (wallets.data || []) as CaptureContext['wallets'],
     habits: (habits.data || []) as CaptureContext['habits'],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    projects: ((projects.data || []) as any[]).map(p => ({ id: p.id, name: p.title })),
   }
 
   let intent
@@ -75,11 +78,16 @@ export async function POST(request: Request) {
     }
 
     if (intent.module === 'task') {
+      const project = intent.projectName
+        ? ctx.projects.find(p => p.name.toLowerCase() === intent.projectName!.toLowerCase() || p.name.toLowerCase().includes(intent.projectName!.toLowerCase()) || intent.projectName!.toLowerCase().includes(p.name.toLowerCase()))
+        : undefined
       const { error } = await supabase.from('tasks').insert({
-        user_id: userId, title: intent.title, status: 'todo', priority: 0, scheduled_date: intent.scheduledDate,
+        user_id: userId, title: intent.title, status: 'todo', priority: 0,
+        project_id: project?.id ?? null, scheduled_date: intent.scheduledDate,
       })
       if (error) throw error
-      return NextResponse.json({ ok: true, module: 'task', detail: `Task · ${intent.title}${intent.scheduledDate ? ` (${intent.scheduledDate})` : ''}` })
+      const extra = [project ? `→ ${project.name}` : '', intent.scheduledDate ? `(${intent.scheduledDate})` : ''].filter(Boolean).join(' ')
+      return NextResponse.json({ ok: true, module: 'task', detail: `Task · ${intent.title}${extra ? ` ${extra}` : ''}` })
     }
 
     if (intent.module === 'journal') {
