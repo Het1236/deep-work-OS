@@ -1259,22 +1259,62 @@ export async function getBudgetStatus(userId: string, ref: Date = new Date()): P
 }
 
 // ─── Finance: Savings goals ───────────────────
+// Goal "saved" = wallet→goal deposits minus goal→wallet withdrawals (linked transactions),
+// plus any legacy savings_contributions rows (pre-transaction model).
 export async function getSavingsGoals(userId: string): Promise<SavingsGoalStatus[]> {
-  const [{ data: goals }, { data: contribs }] = await Promise.all([
+  const [{ data: goals }, { data: goalTx }, { data: contribs }] = await Promise.all([
     supabase.from('savings_goals').select('*').eq('user_id', userId).order('is_achieved').order('sort_order').order('created_at'),
+    supabase.from('transactions').select('goal_id, amount, account_id, to_account_id').eq('user_id', userId).not('goal_id', 'is', null),
     supabase.from('savings_contributions').select('goal_id, amount').eq('user_id', userId),
   ])
   const savedMap = new Map<string, number>()
+  for (const t of (goalTx || []) as { goal_id: string; amount: number; account_id: string | null; to_account_id: string | null }[]) {
+    // deposit = money came FROM a wallet (account_id set); withdraw = money went TO a wallet (to_account_id set)
+    const delta = (t.account_id ? Number(t.amount) : 0) - (t.to_account_id ? Number(t.amount) : 0)
+    savedMap.set(t.goal_id, (savedMap.get(t.goal_id) || 0) + delta)
+  }
   for (const c of (contribs || []) as { goal_id: string; amount: number }[]) {
     savedMap.set(c.goal_id, (savedMap.get(c.goal_id) || 0) + Number(c.amount))
   }
   return ((goals || []) as SavingsGoal[]).map(g => {
-    const saved = savedMap.get(g.id) || 0
+    const saved = Math.max(0, savedMap.get(g.id) || 0)
     const target = Number(g.target_amount) || 0
     const remaining = Math.max(0, target - saved)
     const pct = target > 0 ? Math.min(100, Math.round((saved / target) * 100)) : 0
     return { ...g, saved, remaining, pct, daysLeft: g.target_date ? daysUntil(g.target_date) : null }
   })
+}
+
+// Move money into ('add') or out of ('withdraw') a goal, recorded as a wallet↔goal transfer.
+// Returns { justAchieved } when an add first funds the goal.
+export async function moveGoalMoney(
+  userId: string,
+  goal: SavingsGoalStatus,
+  amount: number,
+  direction: 'add' | 'withdraw',
+  walletId: string | null,
+): Promise<{ justAchieved: boolean }> {
+  const isAdd = direction === 'add'
+  const { error } = await supabase.from('transactions').insert({
+    user_id: userId,
+    type: 'transfer',
+    amount,
+    category_id: null,
+    account_id: isAdd ? walletId : null,
+    to_account_id: isAdd ? null : walletId,
+    goal_id: goal.id,
+    txn_date: new Date().toISOString().split('T')[0],
+    note: `Savings ${isAdd ? '→' : '←'} ${goal.name}`,
+    recurring_id: null,
+  })
+  if (error) throw error
+  const newSaved = goal.saved + (isAdd ? amount : -amount)
+  const justAchieved = isAdd && !goal.is_achieved && newSaved >= Number(goal.target_amount)
+  if (justAchieved) await supabase.from('savings_goals').update({ is_achieved: true }).eq('id', goal.id)
+  else if (!isAdd && goal.is_achieved && newSaved < Number(goal.target_amount)) {
+    await supabase.from('savings_goals').update({ is_achieved: false }).eq('id', goal.id)
+  }
+  return { justAchieved }
 }
 
 export async function createSavingsGoal(g: Omit<SavingsGoal, 'id' | 'created_at'>) {
@@ -1350,7 +1390,7 @@ export async function processDueRecurring(userId: string): Promise<number> {
     while (next <= today && guard < 120) {
       toInsert.push({
         user_id: userId, type: r.type, amount: Number(r.amount),
-        category_id: r.category_id, account_id: r.account_id, to_account_id: null,
+        category_id: r.category_id, account_id: r.account_id, to_account_id: null, goal_id: null,
         txn_date: next, note: r.note, recurring_id: r.id,
       })
       next = addPeriod(next, r.frequency)

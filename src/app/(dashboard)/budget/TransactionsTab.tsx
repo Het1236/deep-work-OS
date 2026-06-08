@@ -97,11 +97,17 @@ export default function TransactionsTab({
               const isIncome = t.type === 'income'
               const isExpense = t.type === 'expense'
               const sign = isIncome ? '+' : isExpense ? '−' : ''
-              const dotColor = cat?.color || (t.type === 'transfer' ? '#5B9BD5' : '#888')
-              const title = t.type === 'transfer'
-                ? `Transfer${acct ? ` from ${acct.name}` : ''}${toAcct ? ` → ${toAcct.name}` : ''}`
-                : (cat?.name || (isIncome ? 'Income' : 'Expense'))
-              const meta = [t.txn_date, t.note, t.type !== 'transfer' && acct ? acct.name : null].filter(Boolean).join(' · ')
+              const isGoal = !!t.goal_id
+              const goalWallet = acct?.name || toAcct?.name
+              const dotColor = cat?.color || (isGoal ? '#4CAF7D' : t.type === 'transfer' ? '#5B9BD5' : '#888')
+              const title = isGoal
+                ? (t.note || 'Savings')
+                : t.type === 'transfer'
+                  ? `Transfer${acct ? ` from ${acct.name}` : ''}${toAcct ? ` → ${toAcct.name}` : ''}`
+                  : (cat?.name || (isIncome ? 'Income' : 'Expense'))
+              const meta = isGoal
+                ? [t.txn_date, goalWallet].filter(Boolean).join(' · ')
+                : [t.txn_date, t.note, t.type !== 'transfer' && acct ? acct.name : null].filter(Boolean).join(' · ')
               return (
                 <div className="bg-txn-row" key={t.id}>
                   <span className="bg-txn-dot" style={{ background: dotColor }} />

@@ -14,7 +14,7 @@ export type CaptureAction =
   | { module: 'task'; title: string; projectName: string | null; scheduledDate: string | null }
   | { module: 'journal'; text: string }
   | { module: 'habit'; habitName: string }
-  | { module: 'savings'; goalName: string | null; amount: number; note: string | null }
+  | { module: 'savings'; goalName: string | null; amount: number; direction: 'add' | 'withdraw'; walletName: string | null; note: string | null }
   | { module: 'budget_set'; categoryName: string | null; amount: number }
   | { module: 'new_project'; title: string }
   | { module: 'new_goal'; title: string; targetAmount: number | null; targetDate: string | null }
@@ -51,7 +51,7 @@ Each <action> is exactly ONE of these shapes:
 { "module":"task", "title":string, "projectName":string|null, "scheduledDate":"YYYY-MM-DD"|null }
 { "module":"journal", "text":string }
 { "module":"habit", "habitName":string }
-{ "module":"savings", "goalName":string|null, "amount":number, "note":string|null }
+{ "module":"savings", "goalName":string|null, "amount":number, "direction":"add"|"withdraw", "walletName":string|null, "note":string|null }
 { "module":"budget_set", "categoryName":string|null, "amount":number }
 { "module":"new_project", "title":string }
 { "module":"new_goal", "title":string, "targetAmount":number|null, "targetDate":"YYYY-MM-DD"|null }
@@ -62,7 +62,7 @@ Rules:
 - categoryName / walletName / projectName / goalName / habitName MUST be the closest match from the user's lists above, or null if nothing fits.
 - Money: bare "120 chai" or "spent/paid/bought" => expense; "got/received/earned/allowance/salary/income/refund" => income.
 - "move/transfer X from A to B" => transfer.
-- "save/put/add X to <goal>" or "<goal> 500" => savings (contribute to a savings goal).
+- "save/put/add X to <goal>" => savings with direction "add". "withdraw/remove/take out/pull X from <goal>" => savings with direction "withdraw". Set walletName to the wallet mentioned ("from cash", "to bank") or null.
 - "set budget"/"budget 3000 for Food" => budget_set.
 - "new project"/"start project X" => new_project. "new goal"/"save for X" that names a TARGET amount => new_goal.
 - "task:"/"todo"/"remind me"/"add ... to <project>" => task. projectName only if a project is named; scheduledDate only if an explicit day/date is named (e.g. "tomorrow", "Monday", "June 2"), else null.

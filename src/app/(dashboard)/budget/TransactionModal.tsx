@@ -79,6 +79,7 @@ export default function TransactionModal({
         category_id: type === 'transfer' ? null : (categoryId || null),
         account_id: accountId || null,
         to_account_id: type === 'transfer' ? (toAccountId || null) : null,
+        goal_id: null,
         txn_date: date,
         note: note.trim() || null,
         recurring_id: null,

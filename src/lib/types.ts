@@ -242,6 +242,7 @@ export type Transaction = {
   category_id: string | null
   account_id: string | null
   to_account_id: string | null
+  goal_id: string | null
   txn_date: string
   note: string | null
   recurring_id: string | null

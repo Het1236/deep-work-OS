@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { SavingsGoalStatus } from '@/lib/types'
+import type { SavingsGoalStatus, FinanceAccount } from '@/lib/types'
 import { deleteSavingsGoal } from '@/lib/data'
 import { formatINR } from '@/lib/finance'
 import { motion } from 'framer-motion'
@@ -32,10 +32,11 @@ function countdown(daysLeft: number | null): string {
 }
 
 export default function GoalsTab({
-  userId, goals, onChanged,
+  userId, goals, accounts, onChanged,
 }: {
   userId: string
   goals: SavingsGoalStatus[]
+  accounts: FinanceAccount[]
   onChanged: () => void
 }) {
   const [modalOpen, setModalOpen] = useState(false)
@@ -101,8 +102,8 @@ export default function GoalsTab({
                 </div>
 
                 <div className="bg-goal-actions">
-                  <button className="bg-btn bg-btn--primary bg-btn--sm bg-btn--full" onClick={() => setContributeFor(g)} disabled={g.remaining <= 0}>
-                    <Plus size={13} /> Add money
+                  <button className="bg-btn bg-btn--primary bg-btn--sm bg-btn--full" onClick={() => setContributeFor(g)}>
+                    <Plus size={13} /> Add / withdraw
                   </button>
                   <button className="bg-icon-btn" title="Edit" onClick={() => { setEditing(g); setModalOpen(true) }}><Pencil size={14} /></button>
                   <button className="bg-icon-btn" title="Delete" onClick={() => handleDelete(g)}><Trash2 size={14} /></button>
@@ -126,6 +127,7 @@ export default function GoalsTab({
         onClose={() => setContributeFor(null)}
         userId={userId}
         goal={contributeFor}
+        accounts={accounts}
         onSaved={onChanged}
       />
     </div>
