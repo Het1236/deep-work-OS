@@ -116,25 +116,36 @@ export async function applyAction(client: Client, userId: string, a: CaptureActi
     }
 
     if (a.module === 'savings') {
-      if (!a.amount || a.amount <= 0) return { ok: false, module: 'savings', detail: 'Need an amount to save' }
+      if (!a.amount || a.amount <= 0) return { ok: false, module: 'savings', detail: 'Need an amount' }
       const goal = a.goalName ? findByName(ctx.savingsGoals, a.goalName) : ctx.savingsGoals[0]
       if (!goal) return { ok: false, module: 'savings', detail: 'No matching savings goal' }
-      const { data, error } = await client.from('savings_contributions').insert({
-        user_id: userId, goal_id: goal.id, amount: a.amount, contributed_at: today(), note: a.note,
-      }).select('id').single()
-      if (error || !data) throw error || new Error('insert failed')
-      // mark achieved if funded
-      const [{ data: gRow }, { data: contribs }] = await Promise.all([
+      const wallet = a.walletName ? findByName(ctx.wallets, a.walletName) : ctx.wallets[0]
+      if (!wallet) return { ok: false, module: 'savings', detail: 'No wallet to move money from/to' }
+      const isAdd = a.direction !== 'withdraw'
+
+      const [{ data: gRow }, { data: gtx }] = await Promise.all([
         client.from('savings_goals').select('target_amount,is_achieved').eq('id', goal.id).single(),
-        client.from('savings_contributions').select('amount').eq('goal_id', goal.id),
+        client.from('transactions').select('amount,account_id,to_account_id').eq('goal_id', goal.id),
       ])
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const saved = ((contribs || []) as any[]).reduce((s, c) => s + Number(c.amount), 0)
-      if (gRow && !gRow.is_achieved && saved >= Number(gRow.target_amount)) {
+      const saved = ((gtx || []) as any[]).reduce((s, t) => s + (t.account_id ? Number(t.amount) : 0) - (t.to_account_id ? Number(t.amount) : 0), 0)
+      if (!isAdd && a.amount > saved) return { ok: false, module: 'savings', detail: `Only ${formatINR(saved)} in ${goal.name}` }
+
+      const { data, error } = await client.from('transactions').insert({
+        user_id: userId, type: 'transfer', amount: a.amount, category_id: null,
+        account_id: isAdd ? wallet.id : null, to_account_id: isAdd ? null : wallet.id,
+        goal_id: goal.id, txn_date: today(), note: `Savings ${isAdd ? '→' : '←'} ${goal.name}`, recurring_id: null,
+      }).select('id').single()
+      if (error || !data) throw error || new Error('insert failed')
+
+      const newSaved = saved + (isAdd ? a.amount : -a.amount)
+      if (gRow && isAdd && !gRow.is_achieved && newSaved >= Number(gRow.target_amount)) {
         await client.from('savings_goals').update({ is_achieved: true }).eq('id', goal.id)
         await awardXp(client, userId, 'savings_funded', 20)
+      } else if (gRow && !isAdd && gRow.is_achieved && newSaved < Number(gRow.target_amount)) {
+        await client.from('savings_goals').update({ is_achieved: false }).eq('id', goal.id)
       }
-      return { ok: true, module: 'savings', detail: `${formatINR(a.amount)} → ${goal.name}`, undo: { kind: 'savings', id: data.id } }
+      return { ok: true, module: 'savings', detail: `${formatINR(a.amount)} ${isAdd ? '→' : '←'} ${goal.name} · ${wallet.name}`, undo: { kind: 'tx', id: data.id } }
     }
 
     if (a.module === 'budget_set') {

@@ -114,7 +114,7 @@ export default function BudgetPage() {
       {tab === 'overview' && <OverviewTab overview={overview} trends={trends} />}
       {tab === 'transactions' && <TransactionsTab userId={userId!} categories={categories} accounts={accounts} refMonth={refMonth} onChanged={() => { load(); triggerRefresh() }} />}
       {tab === 'budgets' && <BudgetsTab status={budgetStatus} onManage={() => setTab('transactions')} />}
-      {tab === 'goals' && <GoalsTab userId={userId!} goals={goals} onChanged={() => { load(); triggerRefresh() }} />}
+      {tab === 'goals' && <GoalsTab userId={userId!} goals={goals} accounts={accounts} onChanged={() => { load(); triggerRefresh() }} />}
     </div>
   )
 }
