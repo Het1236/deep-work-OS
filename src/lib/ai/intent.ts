@@ -1,7 +1,7 @@
 import { getAIProvider } from './index'
 
 export type CaptureContext = {
-  categories: { id: string; name: string; kind: 'income' | 'expense' }[]
+  categories: { id: string; name: string; kind: 'income' | 'expense'; default_scope: 'self' | 'family' }[]
   wallets: { id: string; name: string }[]
   habits: { id: string; name: string }[]
   projects: { id: string; name: string }[]
@@ -9,7 +9,7 @@ export type CaptureContext = {
 }
 
 export type CaptureAction =
-  | { module: 'budget'; type: 'expense' | 'income'; amount: number; categoryName: string | null; walletName: string | null; note: string | null }
+  | { module: 'budget'; type: 'expense' | 'income'; amount: number; categoryName: string | null; walletName: string | null; scope: 'self' | 'family' | null; note: string | null }
   | { module: 'transfer'; amount: number; fromWallet: string | null; toWallet: string | null; note: string | null }
   | { module: 'task'; title: string; projectName: string | null; scheduledDate: string | null }
   | { module: 'journal'; text: string }
@@ -22,7 +22,7 @@ export type CaptureAction =
 
 function regexFallback(message: string): CaptureAction[] | null {
   const m = message.trim().match(/^(\d+(?:\.\d+)?)\s+(.+)$/)
-  if (m) return [{ module: 'budget', type: 'expense', amount: parseFloat(m[1]), categoryName: null, walletName: null, note: m[2].trim() }]
+  if (m) return [{ module: 'budget', type: 'expense', amount: parseFloat(m[1]), categoryName: null, walletName: null, scope: null, note: m[2].trim() }]
   return null
 }
 
@@ -46,7 +46,7 @@ The user's savings goals: ${goals}
 
 Return ONLY this JSON object (no prose): { "actions": [ <action>, ... ] }
 Each <action> is exactly ONE of these shapes:
-{ "module":"budget", "type":"expense"|"income", "amount":number, "categoryName":string|null, "walletName":string|null, "note":string|null }
+{ "module":"budget", "type":"expense"|"income", "amount":number, "categoryName":string|null, "walletName":string|null, "scope":"self"|"family"|null, "note":string|null }
 { "module":"transfer", "amount":number, "fromWallet":string|null, "toWallet":string|null, "note":string|null }
 { "module":"task", "title":string, "projectName":string|null, "scheduledDate":"YYYY-MM-DD"|null }
 { "module":"journal", "text":string }
@@ -61,6 +61,7 @@ Rules:
 - SPLIT compound messages into multiple actions. Example: "allowance 500 from father, 420 fuel both from cash" => [ {budget income 500, categoryName closest to "Allowance", walletName "Cash", note "from father"}, {budget expense 420, categoryName closest to "Fuel"/"Travel", walletName "Cash", note "fuel"} ]. Apply shared context (e.g. "both from cash") to EVERY money action it refers to.
 - categoryName / walletName / projectName / goalName / habitName MUST be the closest match from the user's lists above, or null if nothing fits.
 - Money: bare "120 chai" or "spent/paid/bought" => expense; "got/received/earned/allowance/salary/income/refund" => income.
+- For expenses, set "scope":"family" when it's a family/household spend (e.g. "groceries for home", "family dinner", "for mom"), "self" when explicitly personal ("for myself"), otherwise null (it will inherit the category's default).
 - "move/transfer X from A to B" => transfer.
 - "save/put/add X to <goal>" => savings with direction "add". "withdraw/remove/take out/pull X from <goal>" => savings with direction "withdraw". Set walletName to the wallet mentioned ("from cash", "to bank") or null.
 - "set budget"/"budget 3000 for Food" => budget_set.

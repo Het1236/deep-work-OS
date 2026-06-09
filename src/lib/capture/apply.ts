@@ -29,7 +29,7 @@ async function awardXp(client: Client, userId: string, eventType: string, xp: nu
 
 export async function loadCaptureContext(client: Client, userId: string): Promise<CaptureContext> {
   const [cats, wallets, habits, projects, goals] = await Promise.all([
-    client.from('finance_categories').select('id,name,kind').eq('user_id', userId).eq('is_archived', false),
+    client.from('finance_categories').select('id,name,kind,default_scope').eq('user_id', userId).eq('is_archived', false),
     client.from('finance_accounts').select('id,name').eq('user_id', userId).eq('is_active', true),
     client.from('habits').select('id,name').eq('user_id', userId).eq('is_active', true),
     client.from('projects').select('id,title').eq('user_id', userId).neq('status', 'archived'),
@@ -52,15 +52,17 @@ export async function applyAction(client: Client, userId: string, a: CaptureActi
       if (!a.amount || a.amount <= 0) return { ok: false, module: 'budget', detail: 'Need an amount' }
       const cat = a.categoryName ? findByName(ctx.categories.filter(c => c.kind === a.type), a.categoryName) : undefined
       const wallet = a.walletName ? findByName(ctx.wallets, a.walletName) : ctx.wallets[0]
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const scope: 'self' | 'family' = a.type === 'expense' ? (a.scope ?? (cat as any)?.default_scope ?? 'self') : 'self'
       const { data, error } = await client.from('transactions').insert({
         user_id: userId, type: a.type, amount: a.amount, category_id: cat?.id ?? null,
-        account_id: wallet?.id ?? null, to_account_id: null, txn_date: today(), note: a.note, recurring_id: null,
+        account_id: wallet?.id ?? null, to_account_id: null, scope, txn_date: today(), note: a.note, recurring_id: null,
       }).select('id').single()
       if (error || !data) throw error || new Error('insert failed')
       const { count } = await client.from('transactions').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('txn_date', today())
       if ((count || 0) <= 1) await awardXp(client, userId, 'finance_log', 3)
       const sign = a.type === 'income' ? '+' : '−'
-      const bits = [cat?.name || 'Uncategorized', wallet?.name].filter(Boolean).join(' · ')
+      const bits = [cat?.name || 'Uncategorized', wallet?.name, scope === 'family' ? '👨‍👩‍👧 family' : null].filter(Boolean).join(' · ')
       return { ok: true, module: 'budget', detail: `${sign}${formatINR(a.amount)} · ${bits}`, undo: { kind: 'tx', id: data.id } }
     }
 

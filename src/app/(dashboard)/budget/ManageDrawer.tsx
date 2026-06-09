@@ -54,7 +54,7 @@ export default function ManageDrawer({
     try {
       await createCategory({
         user_id: userId, name: cName.trim(), kind: cKind, color: cColor,
-        icon: null, monthly_budget: null, sort_order: categories.length, is_archived: false,
+        icon: null, monthly_budget: null, default_scope: 'self', sort_order: categories.length, is_archived: false,
       })
       setCName(''); onChanged()
     } finally { setBusy(false) }
@@ -113,11 +113,19 @@ export default function ManageDrawer({
         {/* Categories */}
         <div className="bg-manage-section">
           <div className="bg-section-label">Expense categories</div>
-          <div style={{ fontSize: '0.6875rem', color: 'var(--text-tertiary)', marginBottom: 8 }}>Set a monthly budget (₹) per category — leave blank for none.</div>
+          <div style={{ fontSize: '0.6875rem', color: 'var(--text-tertiary)', marginBottom: 8 }}>Set a monthly budget (₹), and tap 👨‍👩‍👧 to make a category count as <b>family</b> spend by default (e.g. Groceries).</div>
           {expenseCats.map(c => (
             <div className="bg-manage-row" key={c.id}>
               <span className="bg-color-swatch" style={{ background: c.color || '#888' }} />
               <div style={{ flex: 1, fontSize: '0.875rem', color: 'var(--text-primary)' }}>{c.name}</div>
+              <button
+                className="bg-icon-btn"
+                title={c.default_scope === 'family' ? 'Family by default (tap for personal)' : 'Personal by default (tap for family)'}
+                onClick={async () => { await updateCategory(c.id, { default_scope: c.default_scope === 'family' ? 'self' : 'family' }); onChanged() }}
+                style={{ opacity: c.default_scope === 'family' ? 1 : 0.35, fontSize: '0.95rem', lineHeight: 1 }}
+              >
+                👨‍👩‍👧
+              </button>
               <input
                 className="bg-input bg-budget-set" type="number" min="0" step="1"
                 placeholder="Budget" defaultValue={c.monthly_budget ?? ''} title="Monthly budget (₹)"

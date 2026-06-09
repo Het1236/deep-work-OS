@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import type { BudgetOverview, MonthlyTrend } from '@/lib/types'
 import { formatINR } from '@/lib/finance'
 import { PieChartIcon, Inbox } from 'lucide-react'
@@ -32,8 +33,9 @@ const moneyTooltip = ({ active, payload, label }: any) => {
 }
 
 export default function OverviewTab({ overview, trends }: { overview: BudgetOverview; trends: MonthlyTrend[] }) {
-  const { accounts, categorySpend, dailySeries, recentTransactions, monthExpense } = overview
+  const { accounts, categorySpend, categorySpendFamily, dailySeries, recentTransactions, monthExpense, monthExpenseFamily } = overview
   const hasTrends = trends.some(t => t.income > 0 || t.expense > 0)
+  const [donutScope, setDonutScope] = useState<'self' | 'family'>('self')
 
   const dailyData = dailySeries.map(d => ({
     day: d.date.slice(8), // DD
@@ -41,7 +43,11 @@ export default function OverviewTab({ overview, trends }: { overview: BudgetOver
     Expense: d.expense,
   }))
 
-  const hasMonthData = categorySpend.length > 0 || dailySeries.length > 0
+  const donutData = donutScope === 'self' ? categorySpend : categorySpendFamily
+  const donutTotal = donutScope === 'self' ? monthExpense : monthExpenseFamily
+  const totalSpend = monthExpense + monthExpenseFamily
+  const selfPct = totalSpend > 0 ? Math.round((monthExpense / totalSpend) * 100) : 0
+  const hasMonthData = categorySpend.length > 0 || categorySpendFamily.length > 0 || dailySeries.length > 0
 
   return (
     <div className="animate-fade-in">
@@ -67,6 +73,30 @@ export default function OverviewTab({ overview, trends }: { overview: BudgetOver
         </div>
       )}
 
+      {totalSpend > 0 && (
+        <div className="bg-card" style={{ marginBottom: 'var(--space-lg)' }}>
+          <div className="bg-card-title">Personal vs Family</div>
+          <div className="bg-card-subtitle">Where this month&apos;s spending went</div>
+          <div style={{ display: 'flex', gap: 'var(--space-2xl)', marginTop: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: '0.6875rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🙋 You</div>
+              <div className="text-mono" style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--status-danger)' }}>{formatINR(monthExpense)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '0.6875rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>👨‍👩‍👧 Family</div>
+              <div className="text-mono" style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--status-info)' }}>{formatINR(monthExpenseFamily)}</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', height: 10, borderRadius: 'var(--radius-full)', overflow: 'hidden', marginTop: 14, background: 'var(--bg-hover)' }}>
+            <div style={{ width: `${selfPct}%`, background: 'var(--status-danger)' }} />
+            <div style={{ width: `${100 - selfPct}%`, background: 'var(--status-info)' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem', color: 'var(--text-tertiary)', marginTop: 6 }}>
+            <span>{selfPct}% personal</span><span>{100 - selfPct}% family</span>
+          </div>
+        </div>
+      )}
+
       {hasTrends && (
         <div className="bg-card" style={{ marginBottom: 'var(--space-lg)' }}>
           <div className="bg-card-title">6-Month Trend</div>
@@ -89,16 +119,24 @@ export default function OverviewTab({ overview, trends }: { overview: BudgetOver
         <div className="bg-grid-2">
           {/* Spending by category donut */}
           <div className="bg-card">
-            <div className="bg-card-title">Spending by Category</div>
-            <div className="bg-card-subtitle">This month</div>
-            {categorySpend.length === 0 ? (
-              <div className="bg-empty"><PieChartIcon size={28} className="bg-empty-icon" /><br />No expenses logged yet.</div>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+              <div>
+                <div className="bg-card-title">Spending by Category</div>
+                <div className="bg-card-subtitle">{donutScope === 'self' ? 'Personal · this month' : 'Family · this month'}</div>
+              </div>
+              <div className="bg-seg" style={{ width: 'auto' }}>
+                <button className={`bg-seg-btn${donutScope === 'self' ? ' bg-seg-btn--active' : ''}`} onClick={() => setDonutScope('self')} style={{ padding: '5px 10px' }}>You</button>
+                <button className={`bg-seg-btn${donutScope === 'family' ? ' bg-seg-btn--active' : ''}`} onClick={() => setDonutScope('family')} style={{ padding: '5px 10px' }}>Family</button>
+              </div>
+            </div>
+            {donutData.length === 0 ? (
+              <div className="bg-empty"><PieChartIcon size={28} className="bg-empty-icon" /><br />No {donutScope === 'self' ? 'personal' : 'family'} expenses yet.</div>
             ) : (
               <div className="bg-donut-wrap" style={{ marginTop: 8 }}>
                 <ResponsiveContainer width="100%" height={240}>
                   <PieChart>
                     <Pie
-                      data={categorySpend}
+                      data={donutData}
                       dataKey="total"
                       nameKey="name"
                       innerRadius={62}
@@ -106,20 +144,20 @@ export default function OverviewTab({ overview, trends }: { overview: BudgetOver
                       paddingAngle={2}
                       stroke="none"
                     >
-                      {categorySpend.map((c) => <Cell key={c.categoryId} fill={c.color} />)}
+                      {donutData.map((c) => <Cell key={c.categoryId} fill={c.color} />)}
                     </Pie>
                     <Tooltip content={moneyTooltip} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="bg-donut-center">
-                  <div className="bg-donut-center-label">Spent</div>
-                  <div className="bg-donut-center-value">{formatINR(monthExpense)}</div>
+                  <div className="bg-donut-center-label">{donutScope === 'self' ? 'You' : 'Family'}</div>
+                  <div className="bg-donut-center-value">{formatINR(donutTotal)}</div>
                 </div>
               </div>
             )}
             {/* Legend */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 12 }}>
-              {categorySpend.slice(0, 8).map(c => (
+              {donutData.slice(0, 8).map(c => (
                 <span key={c.categoryId} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.6875rem', color: 'var(--text-tertiary)' }}>
                   <span style={{ width: 8, height: 8, borderRadius: 2, background: c.color }} />
                   {c.name}

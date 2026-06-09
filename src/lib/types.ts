@@ -221,6 +221,8 @@ export type FinanceAccount = {
   created_at: string
 }
 
+export type ExpenseScope = 'self' | 'family'
+
 export type FinanceCategory = {
   id: string
   user_id: string
@@ -229,6 +231,7 @@ export type FinanceCategory = {
   icon: string | null
   color: string | null
   monthly_budget: number | null
+  default_scope: ExpenseScope
   sort_order: number
   is_archived: boolean
   created_at: string
@@ -243,6 +246,7 @@ export type Transaction = {
   account_id: string | null
   to_account_id: string | null
   goal_id: string | null
+  scope: ExpenseScope
   txn_date: string
   note: string | null
   recurring_id: string | null
@@ -266,10 +270,12 @@ export type CategoryBudgetStatus = {
 export type BudgetOverview = {
   totalBalance: number
   monthIncome: number
-  monthExpense: number
-  monthNet: number
+  monthExpense: number                // SELF (personal) expense only
+  monthExpenseFamily: number          // family expense this month
+  monthNet: number                    // income − (self + family)
   accounts: (FinanceAccount & { balance: number })[]
-  categorySpend: CategorySpend[]      // expense breakdown for the month
+  categorySpend: CategorySpend[]      // SELF expense breakdown for the month
+  categorySpendFamily: CategorySpend[]// family expense breakdown for the month
   dailySeries: DailySpend[]           // per-day income/expense for the month
   recentTransactions: Transaction[]   // latest 8
 }
