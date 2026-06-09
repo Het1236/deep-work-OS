@@ -30,6 +30,7 @@ export default function TransactionModal({
   const [toAccountId, setToAccountId] = useState('')
   const [date, setDate] = useState(today)
   const [note, setNote] = useState('')
+  const [scope, setScope] = useState<'self' | 'family'>('self')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -43,6 +44,7 @@ export default function TransactionModal({
       setToAccountId(editing.to_account_id || '')
       setDate(editing.txn_date)
       setNote(editing.note || '')
+      setScope(editing.scope || 'self')
     } else {
       setType('expense')
       setAmount('')
@@ -51,6 +53,7 @@ export default function TransactionModal({
       setToAccountId('')
       setDate(today)
       setNote('')
+      setScope('self')
     }
     setError('')
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -80,6 +83,7 @@ export default function TransactionModal({
         account_id: accountId || null,
         to_account_id: type === 'transfer' ? (toAccountId || null) : null,
         goal_id: null,
+        scope: type === 'expense' ? scope : 'self',
         txn_date: date,
         note: note.trim() || null,
         recurring_id: null,
@@ -137,10 +141,28 @@ export default function TransactionModal({
           {type !== 'transfer' && (
             <div className="bg-field">
               <label className="bg-field-label">Category</label>
-              <select className="bg-select" value={categoryId} onChange={e => setCategoryId(e.target.value)}>
+              <select
+                className="bg-select"
+                value={categoryId}
+                onChange={e => {
+                  setCategoryId(e.target.value)
+                  const c = categories.find(x => x.id === e.target.value)
+                  if (c && type === 'expense') setScope(c.default_scope || 'self')
+                }}
+              >
                 <option value="">Select category…</option>
                 {visibleCats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
+            </div>
+          )}
+
+          {type === 'expense' && (
+            <div className="bg-field">
+              <label className="bg-field-label">Spend for</label>
+              <div className="bg-seg">
+                <button className={`bg-seg-btn${scope === 'self' ? ' bg-seg-btn--active' : ''}`} onClick={() => setScope('self')}>🙋 Myself</button>
+                <button className={`bg-seg-btn${scope === 'family' ? ' bg-seg-btn--active' : ''}`} onClick={() => setScope('family')}>👨‍👩‍👧 Family</button>
+              </div>
             </div>
           )}
 

@@ -66,7 +66,7 @@ export default function BudgetPage() {
   const stats = [
     { label: 'Total Balance', value: overview.totalBalance, icon: Wallet, color: 'var(--accent)' },
     { label: 'Income', value: overview.monthIncome, icon: TrendingUp, color: 'var(--status-success)' },
-    { label: 'Spent', value: overview.monthExpense, icon: TrendingDown, color: 'var(--status-danger)' },
+    { label: 'Spent on you', value: overview.monthExpense, icon: TrendingDown, color: 'var(--status-danger)' },
     { label: 'Net', value: overview.monthNet, icon: Scale, color: overview.monthNet >= 0 ? 'var(--status-success)' : 'var(--status-danger)' },
   ]
 

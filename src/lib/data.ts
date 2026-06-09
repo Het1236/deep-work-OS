@@ -1197,19 +1197,26 @@ export async function getBudgetOverview(userId: string, ref: Date = new Date()):
   const accountsWithBal = accounts.map(a => ({ ...a, balance: accountBalance(a, allTxns) }))
   const totalBalance = accountsWithBal.reduce((s, a) => s + a.balance, 0)
 
-  let monthIncome = 0, monthExpense = 0
+  const isFamily = (t: Transaction) => t.scope === 'family'
+
+  let monthIncome = 0, monthExpense = 0, monthExpenseFamily = 0
   for (const t of monthTxns) {
     if (t.type === 'income') monthIncome += Number(t.amount)
-    else if (t.type === 'expense') monthExpense += Number(t.amount)
+    else if (t.type === 'expense') {
+      if (isFamily(t)) monthExpenseFamily += Number(t.amount)
+      else monthExpense += Number(t.amount)
+    }
   }
 
   const catMap = new Map(categories.map(c => [c.id, c]))
-  const spendByCat = new Map<string, number>()
+  const spendSelf = new Map<string, number>()
+  const spendFamily = new Map<string, number>()
   for (const t of monthTxns) {
     if (t.type !== 'expense' || !t.category_id) continue
-    spendByCat.set(t.category_id, (spendByCat.get(t.category_id) || 0) + Number(t.amount))
+    const m = isFamily(t) ? spendFamily : spendSelf
+    m.set(t.category_id, (m.get(t.category_id) || 0) + Number(t.amount))
   }
-  const categorySpend: CategorySpend[] = [...spendByCat.entries()].map(([id, total]) => ({
+  const toCatSpend = (m: Map<string, number>): CategorySpend[] => [...m.entries()].map(([id, total]) => ({
     categoryId: id, name: catMap.get(id)?.name || 'Uncategorized',
     color: catMap.get(id)?.color || '#888888', total,
   })).sort((a, b) => b.total - a.total)
@@ -1224,9 +1231,11 @@ export async function getBudgetOverview(userId: string, ref: Date = new Date()):
   const dailySeries = [...dayMap.values()].sort((a, b) => a.date.localeCompare(b.date))
 
   return {
-    totalBalance, monthIncome, monthExpense, monthNet: monthIncome - monthExpense,
-    accounts: accountsWithBal, categorySpend, dailySeries,
-    recentTransactions: monthTxns.slice(0, 8),
+    totalBalance, monthIncome, monthExpense, monthExpenseFamily,
+    monthNet: monthIncome - monthExpense - monthExpenseFamily,
+    accounts: accountsWithBal,
+    categorySpend: toCatSpend(spendSelf), categorySpendFamily: toCatSpend(spendFamily),
+    dailySeries, recentTransactions: monthTxns.slice(0, 8),
   }
 }
 
@@ -1239,7 +1248,7 @@ export async function getBudgetStatus(userId: string, ref: Date = new Date()): P
   ])
   const spend = new Map<string, number>()
   for (const t of monthTxns) {
-    if (!t.category_id) continue
+    if (!t.category_id || t.scope === 'family') continue // budgets track personal spend only
     spend.set(t.category_id, (spend.get(t.category_id) || 0) + Number(t.amount))
   }
   return categories
@@ -1390,7 +1399,7 @@ export async function processDueRecurring(userId: string): Promise<number> {
     while (next <= today && guard < 120) {
       toInsert.push({
         user_id: userId, type: r.type, amount: Number(r.amount),
-        category_id: r.category_id, account_id: r.account_id, to_account_id: null, goal_id: null,
+        category_id: r.category_id, account_id: r.account_id, to_account_id: null, goal_id: null, scope: 'self',
         txn_date: next, note: r.note, recurring_id: r.id,
       })
       next = addPeriod(next, r.frequency)
