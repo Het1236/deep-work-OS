@@ -127,16 +127,20 @@ export async function applyAction(client: Client, userId: string, a: CaptureActi
 
       const [{ data: gRow }, { data: gtx }] = await Promise.all([
         client.from('savings_goals').select('target_amount,is_achieved').eq('id', goal.id).single(),
-        client.from('transactions').select('amount,account_id,to_account_id').eq('goal_id', goal.id),
+        client.from('transactions').select('type,amount,account_id,to_account_id').eq('goal_id', goal.id),
       ])
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const saved = ((gtx || []) as any[]).reduce((s, t) => s + (t.account_id ? Number(t.amount) : 0) - (t.to_account_id ? Number(t.amount) : 0), 0)
+      const saved = ((gtx || []) as any[]).reduce((s, t) => {
+        if (t.type === 'income') return s - Number(t.amount)
+        if (t.type === 'transfer') return s + (t.account_id ? Number(t.amount) : 0) - (t.to_account_id ? Number(t.amount) : 0)
+        return s
+      }, 0)
       if (!isAdd && a.amount > saved) return { ok: false, module: 'savings', detail: `Only ${formatINR(saved)} in ${goal.name}` }
 
       const { data, error } = await client.from('transactions').insert({
-        user_id: userId, type: 'transfer', amount: a.amount, category_id: null,
-        account_id: isAdd ? wallet.id : null, to_account_id: isAdd ? null : wallet.id,
-        goal_id: goal.id, txn_date: today(), note: `Savings ${isAdd ? '→' : '←'} ${goal.name}`, recurring_id: null,
+        user_id: userId, type: isAdd ? 'transfer' : 'income', amount: a.amount, category_id: null,
+        account_id: wallet.id, to_account_id: null, scope: 'self',
+        goal_id: goal.id, txn_date: today(), note: isAdd ? `Savings → ${goal.name}` : `Moved from ${goal.name}`, recurring_id: null,
       }).select('id').single()
       if (error || !data) throw error || new Error('insert failed')
 

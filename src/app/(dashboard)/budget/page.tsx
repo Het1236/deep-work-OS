@@ -111,7 +111,7 @@ export default function BudgetPage() {
         <button className={`bg-tab${tab === 'goals' ? ' bg-tab--active' : ''}`} onClick={() => setTab('goals')}>Goals</button>
       </div>
 
-      {tab === 'overview' && <OverviewTab overview={overview} trends={trends} />}
+      {tab === 'overview' && <OverviewTab overview={overview} trends={trends} userId={userId!} onChanged={() => { load(); triggerRefresh() }} />}
       {tab === 'transactions' && <TransactionsTab userId={userId!} categories={categories} accounts={accounts} refMonth={refMonth} onChanged={() => { load(); triggerRefresh() }} />}
       {tab === 'budgets' && <BudgetsTab status={budgetStatus} onManage={() => setTab('transactions')} />}
       {tab === 'goals' && <GoalsTab userId={userId!} goals={goals} accounts={accounts} onChanged={() => { load(); triggerRefresh() }} />}

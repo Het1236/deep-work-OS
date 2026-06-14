@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import type { BudgetOverview, MonthlyTrend } from '@/lib/types'
 import { formatINR } from '@/lib/finance'
-import { PieChartIcon, Inbox } from 'lucide-react'
+import { PieChartIcon, Inbox, Pencil } from 'lucide-react'
+import ReconcileModal from './ReconcileModal'
 import {
   PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend,
@@ -32,10 +33,11 @@ const moneyTooltip = ({ active, payload, label }: any) => {
   )
 }
 
-export default function OverviewTab({ overview, trends }: { overview: BudgetOverview; trends: MonthlyTrend[] }) {
+export default function OverviewTab({ overview, trends, userId, onChanged }: { overview: BudgetOverview; trends: MonthlyTrend[]; userId: string; onChanged: () => void }) {
   const { accounts, categorySpend, categorySpendFamily, dailySeries, recentTransactions, monthExpense, monthExpenseFamily } = overview
   const hasTrends = trends.some(t => t.income > 0 || t.expense > 0)
   const [donutScope, setDonutScope] = useState<'self' | 'family'>('self')
+  const [reconcileFor, setReconcileFor] = useState<{ id: string; name: string; balance: number } | null>(null)
 
   const dailyData = dailySeries.map(d => ({
     day: d.date.slice(8), // DD
@@ -59,8 +61,9 @@ export default function OverviewTab({ overview, trends }: { overview: BudgetOver
               <span className="bg-wallet-dot" style={{ background: a.color || '#888' }} />
               <div>
                 <div className="bg-wallet-name">{a.name}</div>
-                <div className="bg-wallet-bal">{formatINR(a.balance)}</div>
+                <div className="bg-wallet-bal" style={{ color: a.balance < 0 ? 'var(--status-danger)' : undefined }}>{formatINR(a.balance)}</div>
               </div>
+              <button className="bg-icon-btn" title="Fix actual balance" onClick={() => setReconcileFor({ id: a.id, name: a.name, balance: a.balance })} style={{ marginLeft: 'auto' }}><Pencil size={12} /></button>
             </div>
           ))}
         </div>
@@ -224,6 +227,14 @@ export default function OverviewTab({ overview, trends }: { overview: BudgetOver
           </div>
         )}
       </div>
+
+      <ReconcileModal
+        open={!!reconcileFor}
+        onClose={() => setReconcileFor(null)}
+        userId={userId}
+        account={reconcileFor}
+        onSaved={onChanged}
+      />
     </div>
   )
 }

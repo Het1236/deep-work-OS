@@ -1273,13 +1273,16 @@ export async function getBudgetStatus(userId: string, ref: Date = new Date()): P
 export async function getSavingsGoals(userId: string): Promise<SavingsGoalStatus[]> {
   const [{ data: goals }, { data: goalTx }, { data: contribs }] = await Promise.all([
     supabase.from('savings_goals').select('*').eq('user_id', userId).order('is_achieved').order('sort_order').order('created_at'),
-    supabase.from('transactions').select('goal_id, amount, account_id, to_account_id').eq('user_id', userId).not('goal_id', 'is', null),
+    supabase.from('transactions').select('goal_id, type, amount, account_id, to_account_id').eq('user_id', userId).not('goal_id', 'is', null),
     supabase.from('savings_contributions').select('goal_id, amount').eq('user_id', userId),
   ])
   const savedMap = new Map<string, number>()
-  for (const t of (goalTx || []) as { goal_id: string; amount: number; account_id: string | null; to_account_id: string | null }[]) {
-    // deposit = money came FROM a wallet (account_id set); withdraw = money went TO a wallet (to_account_id set)
-    const delta = (t.account_id ? Number(t.amount) : 0) - (t.to_account_id ? Number(t.amount) : 0)
+  for (const t of (goalTx || []) as { goal_id: string; type: string; amount: number; account_id: string | null; to_account_id: string | null }[]) {
+    // deposit = transfer out of a wallet into the goal (+); withdraw = income back to a wallet (−),
+    // or legacy transfer-to-wallet (−)
+    let delta = 0
+    if (t.type === 'income') delta = -Number(t.amount)
+    else if (t.type === 'transfer') delta = (t.account_id ? Number(t.amount) : 0) - (t.to_account_id ? Number(t.amount) : 0)
     savedMap.set(t.goal_id, (savedMap.get(t.goal_id) || 0) + delta)
   }
   for (const c of (contribs || []) as { goal_id: string; amount: number }[]) {
@@ -1304,16 +1307,19 @@ export async function moveGoalMoney(
   walletId: string | null,
 ): Promise<{ justAchieved: boolean }> {
   const isAdd = direction === 'add'
+  // Add = transfer out of the wallet into the goal (neutral to income/expense).
+  // Withdraw = income back into the wallet, flagged as moved from the goal.
   const { error } = await supabase.from('transactions').insert({
     user_id: userId,
-    type: 'transfer',
+    type: isAdd ? 'transfer' : 'income',
     amount,
     category_id: null,
-    account_id: isAdd ? walletId : null,
-    to_account_id: isAdd ? null : walletId,
+    account_id: walletId,
+    to_account_id: null,
     goal_id: goal.id,
+    scope: 'self',
     txn_date: new Date().toISOString().split('T')[0],
-    note: `Savings ${isAdd ? '→' : '←'} ${goal.name}`,
+    note: isAdd ? `Savings → ${goal.name}` : `Moved from ${goal.name}`,
     recurring_id: null,
   })
   if (error) throw error
@@ -1324,6 +1330,33 @@ export async function moveGoalMoney(
     await supabase.from('savings_goals').update({ is_achieved: false }).eq('id', goal.id)
   }
   return { justAchieved }
+}
+
+// Reconcile a wallet to its true balance by inserting an adjustment transaction
+// for the difference (income if you have more than logged, expense if less).
+export async function adjustWalletBalance(
+  userId: string,
+  accountId: string,
+  currentBalance: number,
+  actualBalance: number,
+): Promise<number> {
+  const diff = Math.round((actualBalance - currentBalance) * 100) / 100
+  if (diff === 0) return 0
+  const { error } = await supabase.from('transactions').insert({
+    user_id: userId,
+    type: diff > 0 ? 'income' : 'expense',
+    amount: Math.abs(diff),
+    category_id: null,
+    account_id: accountId,
+    to_account_id: null,
+    goal_id: null,
+    scope: 'self',
+    txn_date: new Date().toISOString().split('T')[0],
+    note: 'Balance adjustment',
+    recurring_id: null,
+  })
+  if (error) throw error
+  return diff
 }
 
 export async function createSavingsGoal(g: Omit<SavingsGoal, 'id' | 'created_at'>) {
