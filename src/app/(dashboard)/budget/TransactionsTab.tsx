@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { FinanceAccount, FinanceCategory, Transaction } from '@/lib/types'
 import { getTransactions, deleteTransaction } from '@/lib/data'
-import { formatINR, monthRange, monthLabel } from '@/lib/finance'
-import { Plus, Settings2, Pencil, Trash2, Inbox, Repeat, FileDown, FileText } from 'lucide-react'
+import { formatINR, monthRange, monthLabel, computeRunningBalances, type BalEffect } from '@/lib/finance'
+import { Plus, Settings2, Pencil, Trash2, Inbox, Repeat, FileDown, FileText, ChevronDown } from 'lucide-react'
 import TransactionModal from './TransactionModal'
 import ManageDrawer from './ManageDrawer'
 import RecurringDrawer from './RecurringDrawer'
@@ -27,6 +27,8 @@ export default function TransactionsTab({
   const [editing, setEditing] = useState<Transaction | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [recurringOpen, setRecurringOpen] = useState(false)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [balMap, setBalMap] = useState<Map<string, BalEffect[]>>(new Map())
 
   const catMap = useMemo(() => new Map(categories.map(c => [c.id, c])), [categories])
   const acctMap = useMemo(() => new Map(accounts.map(a => [a.id, a])), [accounts])
@@ -35,14 +37,14 @@ export default function TransactionsTab({
   const load = useCallback(async () => {
     setLoading(true)
     const { start, end } = monthRange(refMonth)
-    const rows = await getTransactions(userId, {
-      start, end,
-      type: typeFilter || undefined,
-      categoryId: catFilter || undefined,
-    })
+    const [rows, allRows] = await Promise.all([
+      getTransactions(userId, { start, end, type: typeFilter || undefined, categoryId: catFilter || undefined }),
+      getTransactions(userId), // all-time, for running balance
+    ])
     setTxns(rows)
+    setBalMap(computeRunningBalances(accounts, allRows))
     setLoading(false)
-  }, [userId, typeFilter, catFilter, refMonth])
+  }, [userId, typeFilter, catFilter, refMonth, accounts])
 
   useEffect(() => { load() }, [load])
 
@@ -108,20 +110,39 @@ export default function TransactionsTab({
               const meta = isGoal
                 ? [t.txn_date, goalWallet].filter(Boolean).join(' · ')
                 : [t.txn_date, t.note, t.type !== 'transfer' && acct ? acct.name : null].filter(Boolean).join(' · ')
+              const expanded = expandedId === t.id
+              const effects = balMap.get(t.id) || []
               return (
-                <div className="bg-txn-row" key={t.id}>
-                  <span className="bg-txn-dot" style={{ background: dotColor }} />
-                  <div className="bg-txn-main">
-                    <div className="bg-txn-title">{title}</div>
-                    <div className="bg-txn-meta">{meta}</div>
+                <div key={t.id}>
+                  <div className="bg-txn-row" style={{ cursor: 'pointer' }} onClick={() => setExpandedId(expanded ? null : t.id)}>
+                    <span className="bg-txn-dot" style={{ background: dotColor }} />
+                    <div className="bg-txn-main">
+                      <div className="bg-txn-title">{title}</div>
+                      <div className="bg-txn-meta">{meta}</div>
+                    </div>
+                    <div className={`bg-txn-amount ${isIncome ? 'amt-pos' : isExpense ? 'amt-neg' : ''}`}>
+                      {sign}{formatINR(t.amount)}
+                    </div>
+                    <div className="bg-txn-actions">
+                      <ChevronDown size={14} style={{ color: 'var(--text-tertiary)', transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                      <button className="bg-icon-btn" title="Edit" onClick={e => { e.stopPropagation(); setEditing(t); setModalOpen(true) }}><Pencil size={14} /></button>
+                      <button className="bg-icon-btn" title="Delete" onClick={e => { e.stopPropagation(); handleDelete(t.id) }}><Trash2 size={14} /></button>
+                    </div>
                   </div>
-                  <div className={`bg-txn-amount ${isIncome ? 'amt-pos' : isExpense ? 'amt-neg' : ''}`}>
-                    {sign}{formatINR(t.amount)}
-                  </div>
-                  <div className="bg-txn-actions">
-                    <button className="bg-icon-btn" title="Edit" onClick={() => { setEditing(t); setModalOpen(true) }}><Pencil size={14} /></button>
-                    <button className="bg-icon-btn" title="Delete" onClick={() => handleDelete(t.id)}><Trash2 size={14} /></button>
-                  </div>
+                  {expanded && (
+                    <div style={{ padding: '6px 4px 12px 22px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {effects.length === 0 ? (
+                        <div style={{ fontSize: '0.6875rem', color: 'var(--text-tertiary)' }}>No wallet movement recorded.</div>
+                      ) : effects.map((e, i) => (
+                        <div key={i} style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{e.walletName}</span>
+                          <span style={{ color: 'var(--text-tertiary)' }}>{formatINR(e.before)}</span>
+                          <span style={{ color: 'var(--text-tertiary)' }}>→</span>
+                          <span className="text-mono" style={{ color: e.after >= 0 ? 'var(--text-primary)' : 'var(--status-danger)', fontWeight: 700 }}>{formatINR(e.after)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )
             })}

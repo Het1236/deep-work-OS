@@ -67,3 +67,39 @@ export function monthLabel(ref: Date = new Date()): string {
 export function shiftMonth(ref: Date, delta: number): Date {
   return new Date(ref.getFullYear(), ref.getMonth() + delta, 1)
 }
+
+export type BalEffect = { walletName: string; before: number; after: number }
+
+// Per-transaction wallet balance before/after, computed by replaying all transactions
+// chronologically from each wallet's opening balance.
+export function computeRunningBalances(accounts: FinanceAccount[], txns: Transaction[]): Map<string, BalEffect[]> {
+  const bal = new Map<string, number>()
+  const name = new Map<string, string>()
+  for (const a of accounts) { bal.set(a.id, Number(a.opening_balance) || 0); name.set(a.id, a.name) }
+
+  const sorted = [...txns].sort((a, b) =>
+    a.txn_date < b.txn_date ? -1 : a.txn_date > b.txn_date ? 1 : (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0)
+  )
+
+  const out = new Map<string, BalEffect[]>()
+  const applyOut = (effects: BalEffect[], accId: string | null, amt: number) => {
+    if (!accId || !bal.has(accId)) return
+    const before = bal.get(accId)!; const after = before - amt
+    bal.set(accId, after); effects.push({ walletName: name.get(accId) || '', before, after })
+  }
+  const applyIn = (effects: BalEffect[], accId: string | null, amt: number) => {
+    if (!accId || !bal.has(accId)) return
+    const before = bal.get(accId)!; const after = before + amt
+    bal.set(accId, after); effects.push({ walletName: name.get(accId) || '', before, after })
+  }
+
+  for (const t of sorted) {
+    const amt = Number(t.amount) || 0
+    const effects: BalEffect[] = []
+    if (t.type === 'income') applyIn(effects, t.account_id, amt)
+    else if (t.type === 'expense') applyOut(effects, t.account_id, amt)
+    else if (t.type === 'transfer') { applyOut(effects, t.account_id, amt); applyIn(effects, t.to_account_id, amt) }
+    out.set(t.id, effects)
+  }
+  return out
+}
