@@ -1,14 +1,14 @@
 'use client'
 
-import { FolderKanban, Plus, ArrowUpRight, Loader2, X, CheckCircle2, Inbox } from 'lucide-react'
+import { FolderKanban, Plus, ArrowUpRight, Loader2, X, CheckCircle2, Inbox, AlertTriangle } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@/components/UserContext'
 import {
   getProjects, createProject, createTask, updateProjectStatus,
   updateProject, updateTaskStatus, deleteTask,
-  getTasks, updateTask
+  getTasks, updateTask, getAreas
 } from '@/lib/data'
-import type { Project, Task } from '@/lib/types'
+import type { Project, Task, AreaOfFocus } from '@/lib/types'
 
 const statusConfig: Record<string, { label: string; badgeClass: string }> = {
   active: { label: 'Active', badgeClass: 'badge-green' },
@@ -24,6 +24,8 @@ export default function ProjectsPage() {
   const { userId } = useUser()
   const [projects, setProjects] = useState<Project[]>([])
   const [allTasks, setAllTasks] = useState<Task[]>([])
+  const [areas, setAreas] = useState<AreaOfFocus[]>([])
+  const [editAreaId, setEditAreaId] = useState('')
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
   const [quickCapture, setQuickCapture] = useState('')
@@ -39,6 +41,10 @@ export default function ProjectsPage() {
   const [editImpact, setEditImpact] = useState(5)
   const [editConfidence, setEditConfidence] = useState(5)
   const [editEase, setEditEase] = useState(5)
+  // GTD Natural Planning
+  const [editPurpose, setEditPurpose] = useState('')
+  const [editVision, setEditVision] = useState('')
+  const [editPrinciples, setEditPrinciples] = useState('')
   const [newTaskTitle, setNewTaskTitle] = useState('')
 
   // Add form
@@ -60,12 +66,14 @@ export default function ProjectsPage() {
   const loadData = useCallback(async () => {
     if (!userId) return
     setLoading(true)
-    const [p, t] = await Promise.all([
+    const [p, t, a] = await Promise.all([
       getProjects(userId),
       getTasks(userId),
+      getAreas(userId),
     ])
     setProjects(p)
     setAllTasks(t)
+    setAreas(a)
     if (selectedProject) {
       const refreshed = p.find(proj => proj.id === selectedProject.id)
       if (refreshed) setSelectedProject(refreshed)
@@ -96,6 +104,10 @@ export default function ProjectsPage() {
     setEditImpact(project.ice_impact || 5)
     setEditConfidence(project.ice_confidence || 5)
     setEditEase(project.ice_ease || 5)
+    setEditPurpose(project.purpose || '')
+    setEditVision(project.vision || '')
+    setEditPrinciples(project.principles || '')
+    setEditAreaId(project.area_id || '')
   }
 
   async function handleSaveProjectDetails() {
@@ -106,7 +118,11 @@ export default function ProjectsPage() {
       target_date: editTargetDate || null,
       ice_impact: editImpact,
       ice_confidence: editConfidence,
-      ice_ease: editEase
+      ice_ease: editEase,
+      purpose: editPurpose || null,
+      vision: editVision || null,
+      principles: editPrinciples || null,
+      area_id: editAreaId || null,
     })
     setSelectedProject(null)
     loadData()
@@ -426,10 +442,35 @@ export default function ProjectsPage() {
                 <label className="field-label" style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Description</label>
                 <textarea className="input" value={editDesc} onChange={e => setEditDesc(e.target.value)} rows={3} />
               </div>
+
+              {/* GTD Natural Planning */}
+              <details style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: 'var(--space-sm) var(--space-md)' }}>
+                <summary style={{ cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>🧭 Natural Planning (purpose · vision · principles)</summary>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)', marginTop: 'var(--space-md)' }}>
+                  <div>
+                    <label className="field-label" style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>Purpose — <em>why</em> are you doing this?</label>
+                    <textarea className="input" value={editPurpose} onChange={e => setEditPurpose(e.target.value)} rows={2} placeholder="If you're not sure why, you can never do enough of it…" />
+                  </div>
+                  <div>
+                    <label className="field-label" style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>Vision — what does <em>done</em> look like?</label>
+                    <textarea className="input" value={editVision} onChange={e => setEditVision(e.target.value)} rows={2} placeholder="Picture wild success. What will it look/feel like?" />
+                  </div>
+                  <div>
+                    <label className="field-label" style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>Principles — standards & guardrails</label>
+                    <textarea className="input" value={editPrinciples} onChange={e => setEditPrinciples(e.target.value)} rows={2} placeholder="I'd give others free rein as long as they…" />
+                  </div>
+                </div>
+              </details>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
                 <div>
                   <label className="field-label" style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Target Date (Deadline)</label>
                   <input className="input" type="date" value={editTargetDate} onChange={e => setEditTargetDate(e.target.value)} />
+                  <label className="field-label" style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 'var(--space-sm)' }}>Area of Focus</label>
+                  <select className="input" value={editAreaId} onChange={e => setEditAreaId(e.target.value)}>
+                    <option value="">— none —</option>
+                    {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
                 </div>
                 <div>
                   <label className="field-label" style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>ICE Scoring</label>
@@ -548,6 +589,9 @@ export default function ProjectsPage() {
                   const tasksTotal = tasks.length
                   const pct = tasksTotal > 0 ? Math.round((tasksDone / tasksTotal) * 100) : 0
                   const iceScore = project.ice_score || 0
+                  // GTD: every active project must have at least one next action.
+                  const needsNextAction = project.status === 'active' &&
+                    !tasks.some(t => t.gtd_bucket === 'next_action' && t.status !== 'done')
                   return (
                     <div
                       key={project.id}
@@ -561,6 +605,16 @@ export default function ProjectsPage() {
                         <ArrowUpRight size={14} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
                       </div>
                       {project.description && <p className="project-card-desc">{project.description}</p>}
+
+                      {needsNextAction && (
+                        <div
+                          title="GTD: this active project has no next action. Open it and add the very next physical step."
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.6875rem', fontWeight: 600,
+                            color: '#f5a623', background: 'color-mix(in srgb, #f5a623 16%, transparent)', padding: '3px 8px', borderRadius: '6px', marginBottom: 'var(--space-sm)' }}
+                        >
+                          <AlertTriangle size={12} /> Needs a next action
+                        </div>
+                      )}
 
                       {/* ICE Score */}
                       {(project.ice_impact || project.ice_confidence || project.ice_ease) && (

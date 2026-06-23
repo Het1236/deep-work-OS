@@ -3,8 +3,8 @@
 import { Settings, Bell, User, Shield, Palette, Save, Loader2, Check } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@/components/UserContext'
-import { getProfile, updateProfile } from '@/lib/data'
-import type { Profile } from '@/lib/types'
+import { getProfile, updateProfile, getNotificationSettings, updateNotificationSettings } from '@/lib/data'
+import type { Profile, NotificationSettings } from '@/lib/types'
 import TelegramConnect from './TelegramConnect'
 
 export default function SettingsPage() {
@@ -16,12 +16,14 @@ export default function SettingsPage() {
 
   const [displayName, setDisplayName] = useState('')
   const [identity, setIdentity] = useState('')
+  const [notif, setNotif] = useState<NotificationSettings | null>(null)
 
   const loadData = useCallback(async () => {
     if (!userId) return
     setLoading(true)
-    const p = await getProfile(userId)
+    const [p, n] = await Promise.all([getProfile(userId), getNotificationSettings(userId).catch(() => null)])
     setProfile(p)
+    setNotif(n)
     if (p) {
       setDisplayName(p.display_name || '')
       setIdentity(p.identity_statement || '')
@@ -30,6 +32,14 @@ export default function SettingsPage() {
   }, [userId])
 
   useEffect(() => { loadData() }, [loadData])
+
+  // Notification toggles persist immediately (optimistic).
+  async function patchNotif(updates: Partial<NotificationSettings>) {
+    if (!userId || !notif) return
+    const next = { ...notif, ...updates }
+    setNotif(next)
+    try { await updateNotificationSettings(userId, updates) } catch (err) { console.error(err); loadData() }
+  }
 
   async function handleSave() {
     if (!userId) return
@@ -117,27 +127,47 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Notifications */}
+        {/* Notifications — GTD reminders via Telegram */}
         <div className="settings-section card">
-          <h3 className="settings-section-title"><Bell size={16} /> Notifications</h3>
-          <div className="settings-field">
-            <div className="settings-switch-row">
-              <span>Daily reminder</span>
-              <div className="switch switch-on" />
-            </div>
-          </div>
-          <div className="settings-field">
-            <div className="settings-switch-row">
-              <span>Shutdown ritual prompt</span>
-              <div className="switch switch-on" />
-            </div>
-          </div>
-          <div className="settings-field">
-            <div className="settings-switch-row">
-              <span>Weekly AI report ready</span>
-              <div className="switch switch-on" />
-            </div>
-          </div>
+          <h3 className="settings-section-title"><Bell size={16} /> GTD Reminders</h3>
+          {!notif ? (
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-tertiary)' }}>Loading…</p>
+          ) : (
+            <>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginBottom: 'var(--space-lg)' }}>
+                Sent to your linked Telegram. Connect Telegram below to receive these.
+              </p>
+              <div className="settings-field">
+                <div className="settings-switch-row">
+                  <span>☀️ Morning agenda</span>
+                  <div className={`switch ${notif.morning_agenda ? 'switch-on' : ''}`} onClick={() => patchNotif({ morning_agenda: !notif.morning_agenda })} />
+                </div>
+              </div>
+              <div className="settings-field">
+                <div className="settings-switch-row">
+                  <span>📥 Inbox clarify nudge</span>
+                  <div className={`switch ${notif.inbox_nudge ? 'switch-on' : ''}`} onClick={() => patchNotif({ inbox_nudge: !notif.inbox_nudge })} />
+                </div>
+              </div>
+              <div className="settings-field">
+                <div className="settings-switch-row">
+                  <span>🧭 Weekly Review prompt</span>
+                  <div className={`switch ${notif.weekly_review ? 'switch-on' : ''}`} onClick={() => patchNotif({ weekly_review: !notif.weekly_review })} />
+                </div>
+              </div>
+              <div className="settings-field">
+                <div className="settings-switch-row">
+                  <span>⏳ Waiting-for follow-ups</span>
+                  <div className={`switch ${notif.waiting_followup ? 'switch-on' : ''}`} onClick={() => patchNotif({ waiting_followup: !notif.waiting_followup })} />
+                </div>
+              </div>
+              <div className="settings-field">
+                <label className="settings-label">Morning send time (hour, {notif.timezone})</label>
+                <input className="input" type="number" min={0} max={23} value={notif.morning_hour}
+                  onChange={e => patchNotif({ morning_hour: Math.max(0, Math.min(23, +e.target.value)) })} style={{ width: '90px' }} />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Security */}

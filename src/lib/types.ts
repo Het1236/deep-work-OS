@@ -74,15 +74,30 @@ export type Project = {
   goal_id: string | null
   title: string
   description: string | null
-  status: 'active' | 'upcoming' | 'done' | 'archived'
+  status: 'active' | 'upcoming' | 'done' | 'archived' | 'someday'
   ice_impact: number | null
   ice_confidence: number | null
   ice_ease: number | null
   ice_score: number | null
   target_date?: string | null
+  // GTD Natural Planning (the why / the what-done-looks-like / the parameters)
+  purpose?: string | null
+  vision?: string | null
+  principles?: string | null
+  area_id?: string | null   // Horizon 2 link → areas_of_focus
   created_at: string
   tasks?: Task[]
 }
+
+// GTD organizing buckets — kept pristinely distinct (one agreement type each).
+export type GtdBucket =
+  | 'inbox'         // captured, not yet clarified
+  | 'next_action'   // a single physical next action, ready to do
+  | 'waiting_for'   // delegated / blocked, awaiting someone else
+  | 'calendar'      // time-fixed (has scheduled_date)
+  | 'someday'       // someday/maybe — not committed yet
+  | 'reference'     // non-actionable info worth keeping
+  | 'trash'         // discarded (soft)
 
 export type Task = {
   id: string
@@ -96,7 +111,50 @@ export type Task = {
   priority: number
   scheduled_date: string | null
   completed_at: string | null
+  // GTD fields
+  gtd_bucket: GtdBucket
+  context_id: string | null
+  waiting_for_who: string | null
+  waiting_since: string | null
+  time_estimate_minutes: number | null
+  reminder_at: string | null
+  reminder_sent: boolean
   created_at: string
+}
+
+export type GtdContext = {
+  id: string
+  user_id: string
+  name: string
+  emoji: string | null
+  sort: number
+  created_at: string
+}
+
+export type AreaOfFocus = {
+  id: string
+  user_id: string
+  name: string
+  description: string | null
+  kind: 'personal' | 'professional'
+  sort: number
+  created_at: string
+}
+
+export type NotificationSettings = {
+  user_id: string
+  timezone: string
+  morning_agenda: boolean
+  morning_hour: number
+  inbox_nudge: boolean
+  weekly_review: boolean
+  weekly_review_dow: number   // 0 = Sunday
+  weekly_review_hour: number
+  waiting_followup: boolean
+  waiting_followup_days: number
+  last_morning_sent?: string | null
+  last_weekly_sent?: string | null
+  updated_at: string
 }
 
 export type JournalEntry = {

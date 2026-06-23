@@ -79,12 +79,20 @@ export async function applyAction(client: Client, userId: string, a: CaptureActi
     }
 
     if (a.module === 'task') {
+      // GTD: every capture lands in the Inbox to be clarified — unless it was
+      // captured with an explicit date (then it's a time-fixed Calendar item).
       const project = a.projectName ? findByName(ctx.projects, a.projectName) : undefined
+      // Dated → Calendar; filed into a project → already-clarified Next Action;
+      // otherwise a loose capture → Inbox (to be clarified).
+      const bucket = a.scheduledDate ? 'calendar' : project ? 'next_action' : 'inbox'
       const { data, error } = await client.from('tasks').insert({
-        user_id: userId, title: a.title, status: 'todo', priority: 0, project_id: project?.id ?? null, scheduled_date: a.scheduledDate,
+        user_id: userId, title: a.title, status: 'todo', priority: 0,
+        project_id: project?.id ?? null, scheduled_date: a.scheduledDate,
+        gtd_bucket: bucket, is_quick_capture: true,
       }).select('id').single()
       if (error || !data) throw error || new Error('insert failed')
-      const extra = [project ? `→ ${project.name}` : '', a.scheduledDate ? `(${a.scheduledDate})` : ''].filter(Boolean).join(' ')
+      const where = bucket === 'inbox' ? '📥 Inbox' : project ? `→ ${project.name}` : 'Next Action'
+      const extra = [where, a.scheduledDate ? `(${a.scheduledDate})` : ''].filter(Boolean).join(' ')
       return { ok: true, module: 'task', detail: `${a.title}${extra ? ` ${extra}` : ''}`, undo: { kind: 'task', id: data.id } }
     }
 

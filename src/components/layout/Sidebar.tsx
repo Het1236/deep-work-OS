@@ -2,9 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useUser } from '@/components/UserContext'
+import { getBucketCounts } from '@/lib/data'
 import {
   LayoutDashboard, Trophy, Brain, CheckCircle2,
-  FolderKanban, Target, BookOpen, Calendar,
+  FolderKanban, Target, BookOpen, Calendar, Inbox,
   Sparkles, Users, Zap, Timer, Database, Plus, ClipboardList, Wallet, Settings, Activity
 } from 'lucide-react'
 
@@ -14,6 +17,7 @@ const navItems = [
   { icon: Trophy, label: 'Scoreboard', href: '/scoreboard' },
   { icon: Brain, label: 'Evolution', href: '/evolution' },
   { icon: CheckCircle2, label: 'Habits', href: '/habits' },
+  { icon: Inbox, label: 'GTD', href: '/gtd' },
   { icon: FolderKanban, label: 'Projects', href: '/projects' },
   { icon: Target, label: 'Goals', href: '/goals' },
   { icon: BookOpen, label: 'Journals', href: '/journal' },
@@ -29,6 +33,15 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const { userId } = useUser()
+  const [inboxCount, setInboxCount] = useState(0)
+
+  useEffect(() => {
+    if (!userId) return
+    getBucketCounts(userId)
+      .then(c => setInboxCount(c.inbox || 0))
+      .catch(() => {})
+  }, [userId, pathname])
 
   return (
     <aside className="sb">
@@ -55,6 +68,7 @@ export default function Sidebar() {
             >
               <Icon size={16} strokeWidth={isActive ? 2.5 : 1.8} className="sb-link-icon" />
               {item.label}
+              {item.href === '/gtd' && inboxCount > 0 && <span className="sb-badge">{inboxCount}</span>}
             </Link>
           )
         })}
@@ -173,6 +187,23 @@ export default function Sidebar() {
           flex-shrink: 0;
           width: 16px;
           height: 16px;
+        }
+
+        /* Inbox count badge (GTD) */
+        .sb-badge {
+          margin-left: auto;
+          min-width: 18px;
+          height: 18px;
+          padding: 0 5px;
+          border-radius: 9px;
+          font-size: 0.625rem;
+          font-weight: 700;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--primary-gradient);
+          color: var(--on-accent);
+          box-shadow: var(--shadow-glow);
         }
 
         /* ---- ACTIVE STATE — Glass Highlight ---- */

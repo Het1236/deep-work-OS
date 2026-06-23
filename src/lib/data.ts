@@ -6,6 +6,7 @@ import type {
   FinanceAccount, FinanceCategory, Transaction, BudgetOverview, CategorySpend, DailySpend,
   CategoryBudgetStatus, SavingsGoal, SavingsContribution, SavingsGoalStatus,
   RecurringRule, MonthlyTrend,
+  GtdContext, AreaOfFocus, NotificationSettings, GtdBucket,
 } from '@/lib/types'
 import { monthRange, accountBalance, daysUntil, addPeriod, monthKey, shiftMonth } from '@/lib/finance'
 
@@ -491,6 +492,229 @@ export async function deleteTask(taskId: string) {
     .from('tasks')
     .delete()
     .eq('id', taskId)
+  if (error) throw error
+}
+
+// ─── GTD: buckets, clarify, contexts ──────────────
+
+// Inbox = raw captures awaiting clarification (top-down, to zero).
+export async function getInbox(userId: string): Promise<Task[]> {
+  const { data } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('gtd_bucket', 'inbox')
+    .neq('status', 'done')
+    .order('created_at', { ascending: true })
+  return (data || []) as Task[]
+}
+
+export type NextActionFilters = {
+  contextId?: string | null
+  energyLevel?: 'high' | 'low'
+  maxMinutes?: number
+}
+
+// Next Actions — the engage list. Optional 4-criteria filters.
+export async function getNextActions(userId: string, f: NextActionFilters = {}): Promise<Task[]> {
+  let q = supabase
+    .from('tasks')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('gtd_bucket', 'next_action')
+    .neq('status', 'done')
+  if (f.contextId) q = q.eq('context_id', f.contextId)
+  if (f.energyLevel) q = q.eq('energy_level', f.energyLevel)
+  if (f.maxMinutes != null) q = q.lte('time_estimate_minutes', f.maxMinutes)
+  const { data } = await q
+    .order('priority', { ascending: false })
+    .order('created_at', { ascending: true })
+  return (data || []) as Task[]
+}
+
+export async function getWaitingFor(userId: string): Promise<Task[]> {
+  const { data } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('gtd_bucket', 'waiting_for')
+    .neq('status', 'done')
+    .order('waiting_since', { ascending: true })
+  return (data || []) as Task[]
+}
+
+export async function getCalendarTasks(userId: string): Promise<Task[]> {
+  const { data } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('gtd_bucket', 'calendar')
+    .neq('status', 'done')
+    .order('scheduled_date', { ascending: true })
+  return (data || []) as Task[]
+}
+
+export async function getSomeday(userId: string): Promise<Task[]> {
+  const { data } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('gtd_bucket', 'someday')
+    .order('created_at', { ascending: false })
+  return (data || []) as Task[]
+}
+
+export async function getReference(userId: string): Promise<Task[]> {
+  const { data } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('gtd_bucket', 'reference')
+    .order('created_at', { ascending: false })
+  return (data || []) as Task[]
+}
+
+// Live counts per bucket (for nav badges + bucket tabs). Excludes done/trash.
+export async function getBucketCounts(userId: string): Promise<Record<string, number>> {
+  const { data } = await supabase
+    .from('tasks')
+    .select('gtd_bucket, status')
+    .eq('user_id', userId)
+    .neq('status', 'done')
+  const counts: Record<string, number> = {}
+  for (const row of (data || []) as { gtd_bucket: string }[]) {
+    counts[row.gtd_bucket] = (counts[row.gtd_bucket] || 0) + 1
+  }
+  return counts
+}
+
+// Clarify outcome — move a task to a bucket, stamping waiting_since when delegated.
+export type ClarifyPatch = Partial<Task> & { gtd_bucket: GtdBucket }
+export async function clarifyTask(taskId: string, patch: ClarifyPatch): Promise<Task> {
+  const updates: Record<string, unknown> = { ...patch, updated_at: new Date().toISOString() }
+  if (patch.gtd_bucket === 'waiting_for' && patch.waiting_since == null) {
+    updates.waiting_since = new Date().toISOString()
+  }
+  const { data, error } = await supabase
+    .from('tasks')
+    .update(updates)
+    .eq('id', taskId)
+    .select()
+    .single()
+  if (error) throw error
+  return data as Task
+}
+
+// ─── GTD Contexts ─────────────────────────────────
+export async function getContexts(userId: string): Promise<GtdContext[]> {
+  const { data } = await supabase
+    .from('gtd_contexts')
+    .select('*')
+    .eq('user_id', userId)
+    .order('sort', { ascending: true })
+  return (data || []) as GtdContext[]
+}
+
+// Seed the user's starter contexts once (idempotent — only when none exist).
+export async function ensureSeedContexts(userId: string): Promise<GtdContext[]> {
+  const existing = await getContexts(userId)
+  if (existing.length > 0) return existing
+  const seed = [
+    { name: '@calls', emoji: '📞', sort: 0 },
+    { name: '@computer', emoji: '💻', sort: 1 },
+    { name: '@campus', emoji: '🎓', sort: 2 },
+    { name: '@errands', emoji: '🛒', sort: 3 },
+  ].map(c => ({ ...c, user_id: userId }))
+  const { data, error } = await supabase.from('gtd_contexts').insert(seed).select()
+  if (error) throw error
+  return (data || []) as GtdContext[]
+}
+
+export async function createContext(userId: string, name: string, emoji?: string): Promise<GtdContext> {
+  const { data, error } = await supabase
+    .from('gtd_contexts')
+    .insert({ user_id: userId, name, emoji: emoji ?? null, sort: 100 })
+    .select()
+    .single()
+  if (error) throw error
+  return data as GtdContext
+}
+
+export async function updateContext(id: string, updates: Partial<GtdContext>) {
+  const { error } = await supabase.from('gtd_contexts').update(updates).eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteContext(id: string) {
+  const { error } = await supabase.from('gtd_contexts').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ─── Areas of Focus (Horizon 2) ───────────────────
+export async function getAreas(userId: string): Promise<AreaOfFocus[]> {
+  const { data } = await supabase
+    .from('areas_of_focus')
+    .select('*')
+    .eq('user_id', userId)
+    .order('sort', { ascending: true })
+  return (data || []) as AreaOfFocus[]
+}
+
+export async function createArea(area: { user_id: string; name: string; description?: string; kind?: 'personal' | 'professional' }): Promise<AreaOfFocus> {
+  const { data, error } = await supabase
+    .from('areas_of_focus')
+    .insert({ ...area, kind: area.kind ?? 'personal', sort: 100 })
+    .select()
+    .single()
+  if (error) throw error
+  return data as AreaOfFocus
+}
+
+export async function updateArea(id: string, updates: Partial<AreaOfFocus>) {
+  const { error } = await supabase.from('areas_of_focus').update(updates).eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteArea(id: string) {
+  const { error } = await supabase.from('areas_of_focus').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ─── Notification settings ────────────────────────
+const DEFAULT_NOTIFICATION_SETTINGS: Omit<NotificationSettings, 'user_id' | 'updated_at'> = {
+  timezone: 'Asia/Kolkata',
+  morning_agenda: true,
+  morning_hour: 8,
+  inbox_nudge: false,
+  weekly_review: false,
+  weekly_review_dow: 0,
+  weekly_review_hour: 19,
+  waiting_followup: false,
+  waiting_followup_days: 3,
+}
+
+// Read settings, creating the default row on first access.
+export async function getNotificationSettings(userId: string): Promise<NotificationSettings> {
+  const { data } = await supabase
+    .from('notification_settings')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (data) return data as NotificationSettings
+  const { data: created, error } = await supabase
+    .from('notification_settings')
+    .insert({ user_id: userId, ...DEFAULT_NOTIFICATION_SETTINGS })
+    .select()
+    .single()
+  if (error) throw error
+  return created as NotificationSettings
+}
+
+export async function updateNotificationSettings(userId: string, updates: Partial<NotificationSettings>) {
+  const { error } = await supabase
+    .from('notification_settings')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
   if (error) throw error
 }
 
