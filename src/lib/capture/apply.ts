@@ -1,4 +1,4 @@
-import { parseCapture, type CaptureAction, type CaptureContext } from '@/lib/ai/intent'
+import { parseCapture, estimateMealMacros, type CaptureAction, type CaptureContext } from '@/lib/ai/intent'
 import { formatINR } from '@/lib/finance'
 
 // Works with either the admin (service-role) or an authed server client.
@@ -6,8 +6,10 @@ import { formatINR } from '@/lib/finance'
 type Client = any
 
 const today = () => new Date().toISOString().split('T')[0]
+// Meals use the user's local (IST) calendar day, not UTC.
+const todayIST = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
 
-export type UndoRef = { kind: 'tx' | 'task' | 'journal' | 'habit' | 'savings' | 'project' | 'goal'; id: string }
+export type UndoRef = { kind: 'tx' | 'task' | 'journal' | 'habit' | 'savings' | 'project' | 'goal' | 'meal'; id: string }
 export type ApplyResult = { ok: boolean; module: string; detail: string; undo?: UndoRef }
 
 function findByName<T extends { name: string }>(list: T[], q: string | null): T | undefined {
@@ -184,6 +186,35 @@ export async function applyAction(client: Client, userId: string, a: CaptureActi
       }).select('id').single()
       if (error || !data) throw error || new Error('insert failed')
       return { ok: true, module: 'new_goal', detail: `Goal created · ${a.title.trim()} (${formatINR(a.targetAmount)})`, undo: { kind: 'goal', id: data.id } }
+    }
+
+    if (a.module === 'meal') {
+      if (!a.description?.trim()) return { ok: false, module: 'meal', detail: 'What did you eat?' }
+      // Text → itemized macro estimate, then log with computed totals.
+      const { mealName, items } = await estimateMealMacros(a.description)
+      const totals = items.reduce(
+        (t, i) => ({ kcal: t.kcal + i.kcal, protein_g: t.protein_g + i.protein_g, carbs_g: t.carbs_g + i.carbs_g, fat_g: t.fat_g + i.fat_g }),
+        { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
+      )
+      const hour = new Date().getHours()
+      const mealType = a.mealType ?? (hour < 11 ? 'breakfast' : hour < 16 ? 'lunch' : hour < 21 ? 'dinner' : 'snack')
+      const { data, error } = await client.from('meals').insert({
+        user_id: userId, meal_date: todayIST(), meal_type: mealType, name: mealName,
+        ...totals, source: 'capture',
+      }).select('id').single()
+      if (error || !data) throw error || new Error('insert failed')
+      const rows = items.map((it, i) => ({
+        meal_id: data.id, user_id: userId, name: it.name, portion: it.portion || null,
+        kcal: it.kcal, protein_g: it.protein_g, carbs_g: it.carbs_g, fat_g: it.fat_g, sort_order: i,
+      }))
+      await client.from('meal_items').insert(rows)
+      const { count } = await client.from('meals').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('meal_date', today())
+      if ((count || 0) <= 1) await awardXp(client, userId, 'meal_log', 5)
+      return {
+        ok: true, module: 'meal',
+        detail: `🍽 ${mealName} · ${Math.round(totals.kcal)} kcal · ${Math.round(totals.protein_g)}g protein (estimate — refine in Fitness)`,
+        undo: { kind: 'meal', id: data.id },
+      }
     }
 
     return { ok: false, module: 'unknown', detail: a.module === 'unknown' ? a.reason : 'Could not understand that part' }

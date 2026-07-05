@@ -385,3 +385,101 @@ export type RecurringRule = {
 }
 
 export type MonthlyTrend = { month: string; label: string; income: number; expense: number; net: number }
+
+// ─── Fitness & Nutrition ──────────────────────
+export type NutritionTargets = {
+  user_id: string
+  weight_kg: number | null
+  height_cm: number | null
+  age: number | null
+  sex: 'male' | 'female' | null
+  activity_level: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active' | null
+  goal: 'cut' | 'maintain' | 'bulk'
+  tdee_kcal: number | null
+  target_kcal: number
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+  targets_manual: boolean
+  updated_at: string
+}
+
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'drink'
+export type MealSource = 'manual' | 'photo' | 'suggestion' | 'capture'
+
+export type Meal = {
+  id: string
+  user_id: string
+  meal_date: string
+  eaten_at: string
+  meal_type: MealType
+  name: string
+  kcal: number
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+  photo_path: string | null
+  source: MealSource
+  created_at: string
+  meal_items?: MealItem[]
+}
+
+export type MealItem = {
+  id: string
+  meal_id: string
+  user_id: string
+  name: string
+  portion: string | null
+  kcal: number
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+  sort_order: number
+}
+
+// Client-side editable item (pre-save, e.g. in the confirmation editor).
+export type MealDraftItem = {
+  name: string
+  portion: string
+  kcal: number
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+  confidence?: 'high' | 'medium' | 'low'
+}
+
+export type MacroDay = { date: string; kcal: number; protein: number; carbs: number; fat: number }
+
+export type PantryItem = {
+  id: string
+  user_id: string
+  name: string
+  category: string | null
+  created_at: string
+}
+
+export type Workout = {
+  id: string
+  user_id: string
+  title: string
+  started_at: string
+  ended_at: string | null
+  source: 'hevy_csv' | 'hevy_api' | 'manual'
+  external_id: string | null
+  created_at: string
+  workout_sets?: WorkoutSet[]
+}
+
+export type WorkoutSet = {
+  id: string
+  workout_id: string
+  user_id: string
+  exercise_title: string
+  set_index: number
+  set_type: string | null
+  weight_kg: number | null
+  reps: number | null
+  distance_km: number | null
+  duration_seconds: number | null
+  rpe: number | null
+}

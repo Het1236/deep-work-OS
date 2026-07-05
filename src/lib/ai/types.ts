@@ -7,9 +7,13 @@ export type AICompletionOptions = {
   maxTokens?: number
 }
 
+export type AIImagePart = { mimeType: string; dataBase64: string }
+
 export interface AIProvider {
   readonly name: string
   complete(messages: AIMessage[], options?: AICompletionOptions): Promise<string>
+  // Optional multimodal path — providers without vision simply omit it.
+  completeVision?(prompt: string, images: AIImagePart[], options?: AICompletionOptions): Promise<string>
 }
 
 // Thrown when the selected provider has no API key configured.

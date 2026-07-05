@@ -10,7 +10,7 @@ type Admin = ReturnType<typeof createAdminClient>
 
 const UNDO_TABLE: Record<string, string> = {
   tx: 'transactions', task: 'tasks', journal: 'journal_entries', habit: 'habit_logs',
-  savings: 'savings_contributions', project: 'projects', goal: 'savings_goals',
+  savings: 'savings_contributions', project: 'projects', goal: 'savings_goals', meal: 'meals',
 }
 
 async function handleCapture(admin: Admin, userId: string, chatId: number, text: string) {

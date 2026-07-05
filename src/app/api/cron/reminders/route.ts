@@ -141,6 +141,29 @@ async function run(): Promise<{ processed: number }> {
   return { processed }
 }
 
+// Meal-photo retention: purge stored photos older than 30 days (macro data kept).
+// Piggybacks on this cron because both Hobby cron slots are already used.
+async function cleanupMealPhotos(admin: Admin): Promise<number> {
+  try {
+    const cutoff = new Date(Date.now() - 30 * 86_400_000).toISOString().split('T')[0]
+    const { data } = await admin
+      .from('meals')
+      .select('id,photo_path')
+      .not('photo_path', 'is', null)
+      .lt('meal_date', cutoff)
+      .limit(200)
+    const rows = (data || []) as { id: string; photo_path: string }[]
+    if (rows.length === 0) return 0
+    const { error: rmErr } = await admin.storage.from('meal-photos').remove(rows.map(r => r.photo_path))
+    if (rmErr) throw rmErr
+    await admin.from('meals').update({ photo_path: null }).in('id', rows.map(r => r.id))
+    return rows.length
+  } catch (e) {
+    console.error('meal photo cleanup failed', e)
+    return 0 // never let cleanup break reminders
+  }
+}
+
 function authorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET
   if (!secret) return false
@@ -151,7 +174,8 @@ export async function GET(request: Request) {
   if (!authorized(request)) return NextResponse.json({ ok: false }, { status: 401 })
   try {
     const result = await run()
-    return NextResponse.json({ ok: true, ...result })
+    const photosPurged = await cleanupMealPhotos(createAdminClient())
+    return NextResponse.json({ ok: true, ...result, photosPurged })
   } catch (err) {
     console.error('cron/reminders error:', err)
     return NextResponse.json({ ok: false, error: 'failed' }, { status: 500 })

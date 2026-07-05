@@ -7,7 +7,11 @@ import type {
   CategoryBudgetStatus, SavingsGoal, SavingsContribution, SavingsGoalStatus,
   RecurringRule, MonthlyTrend,
   GtdContext, AreaOfFocus, NotificationSettings, GtdBucket,
+  NutritionTargets, Meal, MealDraftItem, MealType, MealSource, MacroDay, PantryItem,
+  Workout, WorkoutSet,
 } from '@/lib/types'
+import { sumMacros } from '@/lib/nutrition'
+import type { HevyWorkout } from '@/lib/hevy'
 import { monthRange, accountBalance, daysUntil, addPeriod, monthKey, shiftMonth } from '@/lib/finance'
 
 const supabase = createClient()
@@ -716,6 +720,225 @@ export async function updateNotificationSettings(userId: string, updates: Partia
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('user_id', userId)
   if (error) throw error
+}
+
+// ─── Fitness & Nutrition ──────────────────────
+
+export async function getNutritionTargets(userId: string): Promise<NutritionTargets | null> {
+  const { data } = await supabase
+    .from('nutrition_targets')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle()
+  return data as NutritionTargets | null
+}
+
+export async function upsertNutritionTargets(userId: string, values: Partial<NutritionTargets>): Promise<NutritionTargets> {
+  const { data, error } = await supabase
+    .from('nutrition_targets')
+    .upsert({ user_id: userId, ...values, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+    .select()
+    .single()
+  if (error) throw error
+  return data as NutritionTargets
+}
+
+export type NewMeal = {
+  meal_date: string
+  meal_type: MealType
+  name: string
+  source: MealSource
+  eaten_at?: string
+  photo_path?: string | null
+}
+
+// Insert a meal + its items; totals are computed from the items.
+export async function createMeal(userId: string, meal: NewMeal, items: MealDraftItem[]): Promise<Meal> {
+  const totals = sumMacros(items)
+  const { data, error } = await supabase
+    .from('meals')
+    .insert({ user_id: userId, ...meal, ...totals })
+    .select()
+    .single()
+  if (error) throw error
+  const created = data as Meal
+  if (items.length) {
+    const rows = items.map((it, i) => ({
+      meal_id: created.id, user_id: userId, name: it.name, portion: it.portion || null,
+      kcal: it.kcal, protein_g: it.protein_g, carbs_g: it.carbs_g, fat_g: it.fat_g, sort_order: i,
+    }))
+    const { error: e2 } = await supabase.from('meal_items').insert(rows)
+    if (e2) throw e2
+  }
+  return created
+}
+
+export async function getMealsForDate(userId: string, ymd: string): Promise<Meal[]> {
+  const { data } = await supabase
+    .from('meals')
+    .select('*, meal_items(*)')
+    .eq('user_id', userId)
+    .eq('meal_date', ymd)
+    .order('eaten_at', { ascending: true })
+  return (data || []) as Meal[]
+}
+
+// Per-day macro totals for the trend chart (grouped client-side).
+export async function getMacroTrend(userId: string, days: number): Promise<MacroDay[]> {
+  const start = new Date()
+  start.setDate(start.getDate() - days + 1)
+  const startYmd = start.toISOString().split('T')[0]
+  const { data } = await supabase
+    .from('meals')
+    .select('meal_date,kcal,protein_g,carbs_g,fat_g')
+    .eq('user_id', userId)
+    .gte('meal_date', startYmd)
+  const byDate = new Map<string, MacroDay>()
+  for (const m of (data || []) as Pick<Meal, 'meal_date' | 'kcal' | 'protein_g' | 'carbs_g' | 'fat_g'>[]) {
+    const d = byDate.get(m.meal_date) || { date: m.meal_date, kcal: 0, protein: 0, carbs: 0, fat: 0 }
+    d.kcal += Number(m.kcal) || 0
+    d.protein += Number(m.protein_g) || 0
+    d.carbs += Number(m.carbs_g) || 0
+    d.fat += Number(m.fat_g) || 0
+    byDate.set(m.meal_date, d)
+  }
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date))
+}
+
+// Update a meal; when items are passed, they replace the existing set and totals recompute.
+export async function updateMeal(mealId: string, userId: string, patch: Partial<Meal>, items?: MealDraftItem[]): Promise<void> {
+  const updates: Record<string, unknown> = { ...patch }
+  delete updates.meal_items
+  if (items) {
+    Object.assign(updates, sumMacros(items))
+    const { error: eDel } = await supabase.from('meal_items').delete().eq('meal_id', mealId)
+    if (eDel) throw eDel
+    if (items.length) {
+      const rows = items.map((it, i) => ({
+        meal_id: mealId, user_id: userId, name: it.name, portion: it.portion || null,
+        kcal: it.kcal, protein_g: it.protein_g, carbs_g: it.carbs_g, fat_g: it.fat_g, sort_order: i,
+      }))
+      const { error: eIns } = await supabase.from('meal_items').insert(rows)
+      if (eIns) throw eIns
+    }
+  }
+  const { error } = await supabase.from('meals').update(updates).eq('id', mealId)
+  if (error) throw error
+}
+
+export async function deleteMeal(mealId: string): Promise<void> {
+  const { error } = await supabase.from('meals').delete().eq('id', mealId)
+  if (error) throw error
+}
+
+// Create a meal from a photo flow: insert meal+items, then upload the photo
+// straight from the browser (storage RLS restricts to the user's own folder).
+export async function createMealWithPhoto(userId: string, meal: NewMeal, items: MealDraftItem[], photo: Blob): Promise<Meal> {
+  const created = await createMeal(userId, { ...meal, source: 'photo' }, items)
+  try {
+    const path = `${userId}/${created.id}.jpg`
+    const { error: upErr } = await supabase.storage
+      .from('meal-photos')
+      .upload(path, photo, { contentType: 'image/jpeg', upsert: true })
+    if (upErr) throw upErr
+    await supabase.from('meals').update({ photo_path: path }).eq('id', created.id)
+    created.photo_path = path
+  } catch (err) {
+    // Meal data is already saved — a failed photo upload shouldn't lose the log.
+    console.error('meal photo upload failed', err)
+  }
+  return created
+}
+
+export async function getMealPhotoUrl(path: string): Promise<string | null> {
+  const { data, error } = await supabase.storage.from('meal-photos').createSignedUrl(path, 3600)
+  if (error) return null
+  return data?.signedUrl ?? null
+}
+
+// ─── Pantry ───────────────────────────────────────
+export async function getPantry(userId: string): Promise<PantryItem[]> {
+  const { data } = await supabase
+    .from('pantry_items')
+    .select('*')
+    .eq('user_id', userId)
+    .order('name', { ascending: true })
+  return (data || []) as PantryItem[]
+}
+
+export async function addPantryItem(userId: string, name: string): Promise<void> {
+  const clean = name.trim().toLowerCase()
+  if (!clean) return
+  const { error } = await supabase
+    .from('pantry_items')
+    .upsert({ user_id: userId, name: clean }, { onConflict: 'user_id,name', ignoreDuplicates: true })
+  if (error) throw error
+}
+
+export async function removePantryItem(id: string): Promise<void> {
+  const { error } = await supabase.from('pantry_items').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ─── Workouts (Hevy import) ───────────────────────
+export async function getWorkouts(userId: string, limit = 30): Promise<Workout[]> {
+  const { data } = await supabase
+    .from('workouts')
+    .select('*, workout_sets(*)')
+    .eq('user_id', userId)
+    .order('started_at', { ascending: false })
+    .limit(limit)
+  return (data || []) as Workout[]
+}
+
+// All sets since a date, flattened with workout started_at (for volume/PR stats).
+export async function getAllSetsForStats(userId: string, sinceIso: string): Promise<(WorkoutSet & { started_at: string })[]> {
+  const { data } = await supabase
+    .from('workouts')
+    .select('started_at, workout_sets(*)')
+    .eq('user_id', userId)
+    .gte('started_at', sinceIso)
+  const out: (WorkoutSet & { started_at: string })[] = []
+  for (const w of (data || []) as { started_at: string; workout_sets: WorkoutSet[] }[]) {
+    for (const s of w.workout_sets || []) out.push({ ...s, started_at: w.started_at })
+  }
+  return out
+}
+
+// Import parsed Hevy workouts; dedupes on (user_id, started_at, title).
+export async function importHevyWorkouts(userId: string, workouts: HevyWorkout[]): Promise<{ imported: number; skipped: number }> {
+  if (workouts.length === 0) return { imported: 0, skipped: 0 }
+
+  // Existing keys in the file's date range → skip set.
+  const times = workouts.map(w => w.startedAt).sort()
+  const { data: existing } = await supabase
+    .from('workouts')
+    .select('started_at,title')
+    .eq('user_id', userId)
+    .gte('started_at', times[0])
+    .lte('started_at', times[times.length - 1])
+  const seen = new Set((existing || []).map(w => `${w.title}|${new Date(w.started_at).toISOString()}`))
+
+  const fresh = workouts.filter(w => !seen.has(`${w.title}|${w.startedAt}`))
+  let imported = 0
+  for (const w of fresh) {
+    const { data: created, error } = await supabase
+      .from('workouts')
+      .insert({ user_id: userId, title: w.title, started_at: w.startedAt, ended_at: w.endedAt, source: 'hevy_csv' })
+      .select('id')
+      .single()
+    if (error) {
+      // unique-constraint race or duplicate → count as skipped, keep going
+      continue
+    }
+    const rows = w.sets.map(s => ({ workout_id: created.id, user_id: userId, ...s }))
+    for (let i = 0; i < rows.length; i += 500) {
+      const { error: setErr } = await supabase.from('workout_sets').insert(rows.slice(i, i + 500))
+      if (setErr) throw setErr
+    }
+    imported++
+  }
+  return { imported, skipped: workouts.length - imported }
 }
 
 // ─── Journal ──────────────────────────────────

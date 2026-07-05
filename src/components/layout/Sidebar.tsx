@@ -7,7 +7,7 @@ import { useUser } from '@/components/UserContext'
 import { getBucketCounts } from '@/lib/data'
 import {
   LayoutDashboard, Trophy, Brain, CheckCircle2,
-  FolderKanban, Target, BookOpen, Calendar, Inbox,
+  FolderKanban, Target, BookOpen, Calendar, Inbox, Dumbbell,
   Sparkles, Users, Zap, Timer, Database, Plus, ClipboardList, Wallet, Settings, Activity
 } from 'lucide-react'
 
@@ -25,6 +25,7 @@ const navItems = [
   { icon: ClipboardList, label: 'Planner', href: '/planner' },
   { icon: Timer, label: 'Focus Timer', href: '/timer' },
   { icon: Wallet, label: 'Budget', href: '/budget' },
+  { icon: Dumbbell, label: 'Fitness', href: '/fitness' },
   { icon: Database, label: 'Second Brain', href: '/second-brain' },
   { icon: Sparkles, label: 'AI Reports', href: '/ai-report' },
   { icon: Users, label: 'Group', href: '/group' },

@@ -18,6 +18,7 @@ export type CaptureAction =
   | { module: 'budget_set'; categoryName: string | null; amount: number }
   | { module: 'new_project'; title: string }
   | { module: 'new_goal'; title: string; targetAmount: number | null; targetDate: string | null }
+  | { module: 'meal'; description: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'drink' | null }
   | { module: 'unknown'; reason: string }
 
 function regexFallback(message: string): CaptureAction[] | null {
@@ -55,6 +56,7 @@ Each <action> is exactly ONE of these shapes:
 { "module":"budget_set", "categoryName":string|null, "amount":number }
 { "module":"new_project", "title":string }
 { "module":"new_goal", "title":string, "targetAmount":number|null, "targetDate":"YYYY-MM-DD"|null }
+{ "module":"meal", "description":string, "mealType":"breakfast"|"lunch"|"dinner"|"snack"|"drink"|null }
 { "module":"unknown", "reason":string }
 
 Rules:
@@ -68,6 +70,7 @@ Rules:
 - "new project"/"start project X" => new_project. "new goal"/"save for X" that names a TARGET amount => new_goal.
 - "task:"/"todo"/"remind me"/"add ... to <project>" => task. projectName only if a project is named; scheduledDate only if an explicit day/date is named (e.g. "tomorrow", "Monday", "June 2"), else null.
 - "journal:"/"today i"/reflections => journal. "done <habit>"/"did <habit>" => habit.
+- "ate/had <food>", "breakfast:/lunch:/dinner: <food>", or a food-only message ("2 rotis and dal") => meal. description = the food text verbatim; mealType from the wording or time cue, else null. Food with a PRICE ("120 chai") stays a budget expense, not a meal — unless eating is explicit ("ate", "had").
 - If a part is truly unclear, emit one { "module":"unknown", "reason": "..." } for it.
 Output ONLY the JSON object.
 
@@ -90,4 +93,39 @@ Message: "${message.replace(/"/g, "'")}"`
     if (fb) return fb
     return [{ module: 'unknown', reason: 'Could not understand the message.' }]
   }
+}
+
+// ── Meal macro estimation from a text description (capture path) ──
+export type EstimatedMealItem = {
+  name: string
+  portion: string
+  kcal: number
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+}
+
+export async function estimateMealMacros(description: string): Promise<{ mealName: string; items: EstimatedMealItem[] }> {
+  const prompt = `Estimate nutrition for this meal described by an Indian user: "${description.replace(/"/g, "'")}".
+Itemize each distinct food/drink. For each, estimate a realistic portion (household measure + grams) and macros for that portion. Be conservative.
+Return ONLY JSON: { "meal_name": string, "items": [ { "name": string, "portion": string, "kcal": number, "protein_g": number, "carbs_g": number, "fat_g": number } ] }`
+  const out = await getAIProvider().complete(
+    [
+      { role: 'system', content: 'You output only valid minified JSON. No markdown, no commentary.' },
+      { role: 'user', content: prompt },
+    ],
+    { json: true, temperature: 0.2, maxTokens: 700 },
+  )
+  const parsed = JSON.parse(out)
+  const coerce = (v: unknown) => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? Math.round(n * 10) / 10 : 0 }
+  const items: EstimatedMealItem[] = (Array.isArray(parsed?.items) ? parsed.items : [])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .map((o: any) => ({
+      name: String(o?.name || '').slice(0, 120),
+      portion: String(o?.portion || '').slice(0, 120),
+      kcal: coerce(o?.kcal), protein_g: coerce(o?.protein_g), carbs_g: coerce(o?.carbs_g), fat_g: coerce(o?.fat_g),
+    }))
+    .filter((i: EstimatedMealItem) => i.name)
+  if (items.length === 0) throw new Error('no items')
+  return { mealName: String(parsed?.meal_name || description).slice(0, 120), items }
 }

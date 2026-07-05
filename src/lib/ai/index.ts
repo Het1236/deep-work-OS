@@ -21,3 +21,12 @@ export function isAIConfigured(): boolean {
   const choice = (process.env.AI_PROVIDER || 'gemini').toLowerCase()
   return choice === 'groq' ? !!process.env.GROQ_API_KEY : !!process.env.GEMINI_API_KEY
 }
+
+// Vision always routes to Gemini regardless of AI_PROVIDER (Groq has no vision models).
+export function getVisionProvider(): AIProvider {
+  return createGeminiProvider()
+}
+
+export function isVisionConfigured(): boolean {
+  return !!process.env.GEMINI_API_KEY
+}

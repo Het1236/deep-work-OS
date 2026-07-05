@@ -1,7 +1,22 @@
-import type { AIMessage, AICompletionOptions, AIProvider } from './types'
+import type { AIMessage, AICompletionOptions, AIProvider, AIImagePart } from './types'
 import { AINotConfiguredError } from './types'
 
 const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+
+async function callGemini(key: string, body: Record<string, unknown>): Promise<string> {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
+  )
+  if (!res.ok) {
+    const detail = await res.text()
+    throw new Error(`Gemini API error ${res.status}: ${detail.slice(0, 300)}`)
+  }
+  const data = await res.json()
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
+  if (!text) throw new Error('Gemini returned an empty response')
+  return text as string
+}
 
 export function createGeminiProvider(): AIProvider {
   const key = process.env.GEMINI_API_KEY
@@ -24,29 +39,32 @@ export function createGeminiProvider(): AIProvider {
         contents[0].parts[0].text = `${systemText}\n\n${contents[0].parts[0].text}`
       }
 
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents,
-            generationConfig: {
-              temperature: options.temperature ?? 0.7,
-              maxOutputTokens: options.maxTokens ?? 2048,
-              ...(options.json ? { responseMimeType: 'application/json' } : {}),
-            },
-          }),
-        }
-      )
-      if (!res.ok) {
-        const detail = await res.text()
-        throw new Error(`Gemini API error ${res.status}: ${detail.slice(0, 300)}`)
-      }
-      const data = await res.json()
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
-      if (!text) throw new Error('Gemini returned an empty response')
-      return text as string
+      return callGemini(key, {
+        contents,
+        generationConfig: {
+          temperature: options.temperature ?? 0.7,
+          maxOutputTokens: options.maxTokens ?? 2048,
+          ...(options.json ? { responseMimeType: 'application/json' } : {}),
+        },
+      })
+    },
+
+    // Multimodal: images + a text prompt in a single user turn.
+    async completeVision(prompt: string, images: AIImagePart[], options: AICompletionOptions = {}) {
+      return callGemini(key, {
+        contents: [{
+          role: 'user',
+          parts: [
+            ...images.map(img => ({ inline_data: { mime_type: img.mimeType, data: img.dataBase64 } })),
+            { text: prompt },
+          ],
+        }],
+        generationConfig: {
+          temperature: options.temperature ?? 0.3,
+          maxOutputTokens: options.maxTokens ?? 2048,
+          ...(options.json ? { responseMimeType: 'application/json' } : {}),
+        },
+      })
     },
   }
 }
