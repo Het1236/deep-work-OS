@@ -188,6 +188,63 @@ export async function applyAction(client: Client, userId: string, a: CaptureActi
       return { ok: true, module: 'new_goal', detail: `Goal created · ${a.title.trim()} (${formatINR(a.targetAmount)})`, undo: { kind: 'goal', id: data.id } }
     }
 
+    if (a.module === 'debt') {
+      if (!a.amount || a.amount <= 0) return { ok: false, module: 'debt', detail: 'Need an amount' }
+      if (!a.person?.trim()) return { ok: false, module: 'debt', detail: 'Who is this with?' }
+      const wallet = a.walletName ? findByName(ctx.wallets, a.walletName) : ctx.wallets[0]
+      if (!wallet) return { ok: false, module: 'debt', detail: 'No wallet available' }
+      const person = a.person.trim()
+
+      if (a.kind === 'lent' || a.kind === 'borrowed') {
+        const isLend = a.kind === 'lent'
+        const { data, error } = await client.from('transactions').insert({
+          user_id: userId, type: isLend ? 'lend' : 'borrow', amount: a.amount, category_id: null,
+          account_id: isLend ? wallet.id : null, to_account_id: isLend ? null : wallet.id,
+          scope: 'self', txn_date: today(), note: null, person, due_date: a.dueDate, is_settled: false,
+        }).select('id').single()
+        if (error || !data) throw error || new Error('insert failed')
+        return {
+          ok: true, module: 'debt',
+          detail: isLend ? `💸 Lent ${formatINR(a.amount)} to ${person} · ${wallet.name}` : `🤝 Borrowed ${formatINR(a.amount)} from ${person} → ${wallet.name}`,
+          undo: { kind: 'tx', id: data.id },
+        }
+      }
+
+      // Repayment: match the person's open debts of the right direction, oldest first.
+      const wantType = a.kind === 'returned_to_me' ? 'lend' : 'borrow'
+      const { data: debtRows } = await client.from('transactions')
+        .select('id,type,amount,person,parent_tx_id,txn_date')
+        .eq('user_id', userId)
+        .in('type', [wantType, 'repayment'])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rows = (debtRows || []) as any[]
+      const repaidBy = new Map<string, number>()
+      for (const r of rows) if (r.type === 'repayment' && r.parent_tx_id) repaidBy.set(r.parent_tx_id, (repaidBy.get(r.parent_tx_id) || 0) + Number(r.amount))
+      const open = rows
+        .filter(r => r.type === wantType && (r.person || '').toLowerCase() === person.toLowerCase())
+        .map(r => ({ ...r, outstanding: Number(r.amount) - (repaidBy.get(r.id) || 0) }))
+        .filter(r => r.outstanding > 0)
+        .sort((x, y) => String(x.txn_date).localeCompare(String(y.txn_date)))
+      if (open.length === 0) return { ok: false, module: 'debt', detail: `No open ${wantType === 'lend' ? 'lend to' : 'borrow from'} "${person}" found` }
+
+      const target = open[0]
+      const applied = Math.min(a.amount, target.outstanding)
+      const incoming = a.kind === 'returned_to_me' // money comes back into your wallet
+      const { data: rp, error: rpErr } = await client.from('transactions').insert({
+        user_id: userId, type: 'repayment', amount: applied, category_id: null,
+        account_id: incoming ? null : wallet.id, to_account_id: incoming ? wallet.id : null,
+        scope: 'self', txn_date: today(), note: null, person: target.person, parent_tx_id: target.id,
+      }).select('id').single()
+      if (rpErr || !rp) throw rpErr || new Error('insert failed')
+      if (applied >= target.outstanding) await client.from('transactions').update({ is_settled: true }).eq('id', target.id)
+      const left = target.outstanding - applied
+      return {
+        ok: true, module: 'debt',
+        detail: `${incoming ? '✅' : '💸'} ${formatINR(applied)} ${incoming ? `back from ${person}` : `repaid to ${person}`}${left > 0 ? ` · ${formatINR(left)} still open` : ' · settled 🎉'}`,
+        undo: { kind: 'tx', id: rp.id },
+      }
+    }
+
     if (a.module === 'meal') {
       if (!a.description?.trim()) return { ok: false, module: 'meal', detail: 'What did you eat?' }
       // Text → itemized macro estimate, then log with computed totals.

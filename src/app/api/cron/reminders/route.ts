@@ -29,6 +29,36 @@ type TaskRow = {
   priority: number; waiting_for_who: string | null; waiting_since: string | null
 }
 
+type DebtRow = {
+  id: string; type: string; amount: number; person: string | null
+  parent_tx_id: string | null; due_date: string | null; txn_date: string; is_settled: boolean
+}
+
+// Outstanding lends/borrows → lines for the morning agenda (empty when all square).
+function buildDebtLines(rows: DebtRow[], ymd: string): string[] {
+  const repaid = new Map<string, number>()
+  for (const r of rows) {
+    if (r.type === 'repayment' && r.parent_tx_id) {
+      repaid.set(r.parent_tx_id, (repaid.get(r.parent_tx_id) || 0) + Number(r.amount))
+    }
+  }
+  const lines: string[] = []
+  for (const r of rows) {
+    if (r.type !== 'lend' && r.type !== 'borrow') continue
+    // Outstanding is computed from repayment rows (is_settled may be stale after an undo).
+    const outstanding = Number(r.amount) - (repaid.get(r.id) || 0)
+    if (outstanding <= 0) continue
+    const days = Math.max(0, Math.floor((new Date(ymd).getTime() - new Date(r.txn_date).getTime()) / 86_400_000))
+    const overdue = !!r.due_date && r.due_date < ymd
+    const who = escapeHtml(r.person || '?')
+    const base = r.type === 'lend'
+      ? `${who} owes you ₹${Math.round(outstanding)}`
+      : `You owe ${who} ₹${Math.round(outstanding)}`
+    lines.push(`• ${overdue ? '⚠ ' : ''}${base} (${days}d${overdue ? ', OVERDUE' : ''})`)
+  }
+  return lines
+}
+
 // Compose the morning agenda: overdue + today's calendar items, then top next actions.
 function buildAgenda(tasks: TaskRow[], ymd: string): string | null {
   const open = tasks.filter(t => t.gtd_bucket !== 'trash')
@@ -82,10 +112,21 @@ async function processUser(admin: Admin, s: Record<string, unknown>, chatId: str
   const tasks = (data || []) as TaskRow[]
 
   if (doMorning) {
-    // ── Morning agenda ──
+    // ── Morning agenda (+ outstanding udhaar section) ──
     if (s.morning_agenda) {
-      const msg = buildAgenda(tasks, ymd)
-      if (msg) await sendMessage(chatId, msg)
+      const { data: debtData } = await admin
+        .from('transactions')
+        .select('id,type,amount,person,parent_tx_id,due_date,txn_date,is_settled')
+        .eq('user_id', s.user_id)
+        .in('type', ['lend', 'borrow', 'repayment'])
+      const debtLines = buildDebtLines((debtData || []) as DebtRow[], ymd)
+      const agenda = buildAgenda(tasks, ymd)
+      if (agenda || debtLines.length) {
+        const parts: string[] = []
+        parts.push(agenda ?? '☀️ <b>Good morning</b>')
+        if (debtLines.length) parts.push('', '💸 <b>Udhaar</b>', ...debtLines)
+        await sendMessage(chatId, parts.join('\n'))
+      }
     }
     // ── Inbox-not-empty clarify nudge ──
     if (s.inbox_nudge) {

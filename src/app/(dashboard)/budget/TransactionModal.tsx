@@ -37,7 +37,10 @@ export default function TransactionModal({
   useEffect(() => {
     if (!open) return
     if (editing) {
-      setType(editing.type)
+      // Debt rows (lend/borrow/repayment) are managed in the Udhaar modal, not here.
+      const t: TxnType = editing.type === 'income' || editing.type === 'expense' || editing.type === 'transfer'
+        ? editing.type : 'expense'
+      setType(t)
       setAmount(String(editing.amount))
       setCategoryId(editing.category_id || '')
       setAccountId(editing.account_id || '')

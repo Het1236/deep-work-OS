@@ -19,6 +19,7 @@ export type CaptureAction =
   | { module: 'new_project'; title: string }
   | { module: 'new_goal'; title: string; targetAmount: number | null; targetDate: string | null }
   | { module: 'meal'; description: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'drink' | null }
+  | { module: 'debt'; kind: 'lent' | 'borrowed' | 'returned_to_me' | 'i_returned'; person: string; amount: number; walletName: string | null; dueDate: string | null }
   | { module: 'unknown'; reason: string }
 
 function regexFallback(message: string): CaptureAction[] | null {
@@ -57,6 +58,7 @@ Each <action> is exactly ONE of these shapes:
 { "module":"new_project", "title":string }
 { "module":"new_goal", "title":string, "targetAmount":number|null, "targetDate":"YYYY-MM-DD"|null }
 { "module":"meal", "description":string, "mealType":"breakfast"|"lunch"|"dinner"|"snack"|"drink"|null }
+{ "module":"debt", "kind":"lent"|"borrowed"|"returned_to_me"|"i_returned", "person":string, "amount":number, "walletName":string|null, "dueDate":"YYYY-MM-DD"|null }
 { "module":"unknown", "reason":string }
 
 Rules:
@@ -71,6 +73,7 @@ Rules:
 - "task:"/"todo"/"remind me"/"add ... to <project>" => task. projectName only if a project is named; scheduledDate only if an explicit day/date is named (e.g. "tomorrow", "Monday", "June 2"), else null.
 - "journal:"/"today i"/reflections => journal. "done <habit>"/"did <habit>" => habit.
 - "ate/had <food>", "breakfast:/lunch:/dinner: <food>", or a food-only message ("2 rotis and dal") => meal. description = the food text verbatim; mealType from the wording or time cue, else null. Food with a PRICE ("120 chai") stays a budget expense, not a meal — unless eating is explicit ("ate", "had").
+- Udhaar/debts => debt: "lent/gave 500 to Rahul" => kind "lent"; "borrowed/took 2000 from dad" => kind "borrowed"; "<person> returned/repaid/gave back X" => "returned_to_me"; "paid back/returned X to <person>" => "i_returned". person = the name mentioned. walletName if a wallet is named ("from cash"), else null. dueDate only if a return-by date is stated. NOT an expense or income.
 - If a part is truly unclear, emit one { "module":"unknown", "reason": "..." } for it.
 Output ONLY the JSON object.
 

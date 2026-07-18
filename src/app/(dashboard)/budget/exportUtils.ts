@@ -1,23 +1,33 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import type { Transaction, FinanceCategory, FinanceAccount } from '@/lib/types'
+import type { Transaction, FinanceCategory, FinanceAccount, DebtStatus } from '@/lib/types'
 import { formatINR } from '@/lib/finance'
 
 type Lookups = { catMap: Map<string, FinanceCategory>; acctMap: Map<string, FinanceAccount> }
+
+const isDebtType = (t: Transaction) => t.type === 'lend' || t.type === 'borrow' || t.type === 'repayment'
+
+function debtLabel(t: Transaction): string {
+  if (t.type === 'lend') return `Lent to ${t.person || '?'}`
+  if (t.type === 'borrow') return `Borrowed from ${t.person || '?'}`
+  return t.account_id ? `Repaid ${t.person || '?'}` : `${t.person || '?'} repaid`
+}
 
 function rowsFor(txns: Transaction[], { catMap, acctMap }: Lookups) {
   return txns.map(t => {
     const cat = t.category_id ? catMap.get(t.category_id)?.name ?? '' : ''
     const acct = t.account_id ? acctMap.get(t.account_id)?.name ?? '' : ''
     const to = t.to_account_id ? acctMap.get(t.to_account_id)?.name ?? '' : ''
-    const signed = (t.type === 'income' ? '' : t.type === 'expense' ? '-' : '') + String(t.amount)
+    // Debt rows: account_id = money out (−), to_account_id = money in (+).
+    const sign = t.type === 'income' ? '' : t.type === 'expense' ? '-'
+      : isDebtType(t) ? (t.account_id ? '-' : '+') : ''
     return {
       date: t.txn_date,
       type: t.type,
-      category: t.type === 'transfer' ? `${acct} → ${to}` : cat,
-      wallet: t.type === 'transfer' ? '' : acct,
+      category: t.type === 'transfer' ? `${acct} → ${to}` : isDebtType(t) ? debtLabel(t) : cat,
+      wallet: t.type === 'transfer' ? '' : acct || to,
       note: t.note ?? '',
-      amount: signed,
+      amount: sign + String(t.amount),
     }
   })
 }
@@ -45,7 +55,7 @@ export function exportTransactionsCSV(txns: Transaction[], lookups: Lookups, lab
   triggerDownload(blob, `transactions-${label.replace(/\s+/g, '-').toLowerCase()}.csv`)
 }
 
-export function exportTransactionsPDF(txns: Transaction[], lookups: Lookups, label: string) {
+export function exportTransactionsPDF(txns: Transaction[], lookups: Lookups, label: string, debts?: DebtStatus[]) {
   const rows = rowsFor(txns, lookups)
   const doc = new jsPDF()
   doc.setFontSize(16)
@@ -65,5 +75,35 @@ export function exportTransactionsPDF(txns: Transaction[], lookups: Lookups, lab
     styles: { fontSize: 8 },
     headStyles: { fillColor: [76, 175, 125] },
   })
+
+  // Outstanding lend/borrow summary (all-time, not just this view's rows).
+  const open = (debts || []).filter(d => d.outstanding > 0)
+  if (open.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const afterTable = (doc as any).lastAutoTable?.finalY ?? 40
+    doc.setFontSize(12)
+    doc.setTextColor(0)
+    doc.text('Outstanding Lend / Borrow', 14, afterTable + 12)
+    autoTable(doc, {
+      startY: afterTable + 16,
+      head: [['Person', 'Direction', 'Original (Rs)', 'Repaid (Rs)', 'Outstanding (Rs)', 'Since', 'Due']],
+      body: open.map(d => [
+        d.person,
+        d.direction === 'lent' ? 'Owes you' : 'You owe',
+        String(d.original), String(d.repaid), String(d.outstanding),
+        d.tx.txn_date, d.tx.due_date ? `${d.tx.due_date}${d.overdue ? ' (OVERDUE)' : ''}` : '—',
+      ]),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [245, 166, 35] },
+    })
+    const owedToYou = open.filter(d => d.direction === 'lent').reduce((s, d) => s + d.outstanding, 0)
+    const youOwe = open.filter(d => d.direction === 'borrowed').reduce((s, d) => s + d.outstanding, 0)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const y = ((doc as any).lastAutoTable?.finalY ?? afterTable + 20) + 7
+    doc.setFontSize(10)
+    doc.setTextColor(120)
+    doc.text(`Owed to you: ${formatINR(owedToYou)}    You owe: ${formatINR(youOwe)}`, 14, y)
+  }
+
   doc.save(`transactions-${label.replace(/\s+/g, '-').toLowerCase()}.pdf`)
 }

@@ -14,6 +14,7 @@ import { motion } from 'framer-motion'
 import { Loader2, Wallet, TrendingUp, TrendingDown, Scale, ChevronLeft, ChevronRight } from 'lucide-react'
 import OverviewTab from './OverviewTab'
 import TransactionsTab from './TransactionsTab'
+import UdhaarCard from './UdhaarCard'
 import BudgetsTab from './BudgetsTab'
 import GoalsTab from './GoalsTab'
 import './budget.css'
@@ -103,6 +104,8 @@ export default function BudgetPage() {
           )
         })}
       </div>
+
+      <UdhaarCard userId={userId!} accounts={accounts} onChanged={() => { load(); triggerRefresh() }} />
 
       <div className="bg-tabs">
         <button className={`bg-tab${tab === 'overview' ? ' bg-tab--active' : ''}`} onClick={() => setTab('overview')}>Overview</button>

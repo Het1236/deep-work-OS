@@ -8,11 +8,11 @@ import type {
   RecurringRule, MonthlyTrend,
   GtdContext, AreaOfFocus, NotificationSettings, GtdBucket,
   NutritionTargets, Meal, MealDraftItem, MealType, MealSource, MacroDay, PantryItem,
-  Workout, WorkoutSet,
+  Workout, WorkoutSet, DebtStatus,
 } from '@/lib/types'
 import { sumMacros } from '@/lib/nutrition'
 import type { HevyWorkout } from '@/lib/hevy'
-import { monthRange, accountBalance, daysUntil, addPeriod, monthKey, shiftMonth } from '@/lib/finance'
+import { monthRange, accountBalance, daysUntil, addPeriod, monthKey, shiftMonth, computeDebtStatuses } from '@/lib/finance'
 
 const supabase = createClient()
 
@@ -877,6 +877,84 @@ export async function addPantryItem(userId: string, name: string): Promise<void>
 
 export async function removePantryItem(id: string): Promise<void> {
   const { error } = await supabase.from('pantry_items').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ─── Udhaar (lend / borrow) ───────────────────────
+
+// All debt-related transactions (lend/borrow + repayments) → per-debt statuses.
+export async function getDebts(userId: string): Promise<DebtStatus[]> {
+  const { data } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('user_id', userId)
+    .in('type', ['lend', 'borrow', 'repayment'])
+    .order('txn_date', { ascending: true })
+  return computeDebtStatuses((data || []) as Transaction[])
+}
+
+export async function createDebt(userId: string, debt: {
+  direction: 'lent' | 'borrowed'
+  person: string
+  amount: number
+  walletId: string
+  dueDate?: string | null
+  note?: string | null
+}): Promise<Transaction> {
+  const isLend = debt.direction === 'lent'
+  const { data, error } = await supabase
+    .from('transactions')
+    .insert({
+      user_id: userId,
+      type: isLend ? 'lend' : 'borrow',
+      amount: debt.amount,
+      category_id: null,
+      // lend: money leaves the wallet; borrow: money enters it.
+      account_id: isLend ? debt.walletId : null,
+      to_account_id: isLend ? null : debt.walletId,
+      scope: 'self',
+      txn_date: new Date().toLocaleDateString('en-CA'),
+      note: debt.note || null,
+      person: debt.person.trim(),
+      due_date: debt.dueDate || null,
+      is_settled: false,
+    })
+    .select()
+    .single()
+  if (error) throw error
+  return data as Transaction
+}
+
+// Record a (possibly partial) repayment against a debt. Caps at the outstanding
+// amount; marks the debt settled when fully repaid. Returns the amount applied.
+export async function recordRepayment(userId: string, debt: DebtStatus, amount: number, walletId: string): Promise<number> {
+  const applied = Math.min(amount, debt.outstanding)
+  if (applied <= 0) return 0
+  const wasLent = debt.direction === 'lent'
+  const { error } = await supabase.from('transactions').insert({
+    user_id: userId,
+    type: 'repayment',
+    amount: applied,
+    category_id: null,
+    // Repaying a lend: money comes back IN; repaying a borrow: money goes OUT.
+    account_id: wasLent ? null : walletId,
+    to_account_id: wasLent ? walletId : null,
+    scope: 'self',
+    txn_date: new Date().toLocaleDateString('en-CA'),
+    note: null,
+    person: debt.person,
+    parent_tx_id: debt.tx.id,
+  })
+  if (error) throw error
+  if (applied >= debt.outstanding) {
+    await supabase.from('transactions').update({ is_settled: true }).eq('id', debt.tx.id)
+  }
+  return applied
+}
+
+// Deleting a debt cascades to its repayments (FK on delete cascade).
+export async function deleteDebt(txId: string): Promise<void> {
+  const { error } = await supabase.from('transactions').delete().eq('id', txId)
   if (error) throw error
 }
 

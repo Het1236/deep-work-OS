@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { FinanceAccount, FinanceCategory, Transaction } from '@/lib/types'
-import { getTransactions, deleteTransaction } from '@/lib/data'
+import { getTransactions, deleteTransaction, getDebts } from '@/lib/data'
 import { formatINR, monthRange, monthLabel, computeRunningBalances, type BalEffect } from '@/lib/finance'
 import { Plus, Settings2, Pencil, Trash2, Inbox, Repeat, FileDown, FileText, ChevronDown } from 'lucide-react'
 import TransactionModal from './TransactionModal'
@@ -77,7 +77,7 @@ export default function TransactionsTab({
         <div className="bg-spacer" />
         <button className="bg-btn" onClick={() => setRecurringOpen(true)}><Repeat size={15} /> Recurring</button>
         <button className="bg-btn" onClick={() => exportTransactionsCSV(txns, { catMap, acctMap }, label)} disabled={txns.length === 0} title="Export CSV"><FileDown size={15} /> CSV</button>
-        <button className="bg-btn" onClick={() => exportTransactionsPDF(txns, { catMap, acctMap }, label)} disabled={txns.length === 0} title="Export PDF"><FileText size={15} /> PDF</button>
+        <button className="bg-btn" onClick={async () => exportTransactionsPDF(txns, { catMap, acctMap }, label, await getDebts(userId))} disabled={txns.length === 0} title="Export PDF"><FileText size={15} /> PDF</button>
         <button className="bg-btn" onClick={() => setDrawerOpen(true)}><Settings2 size={15} /> Manage</button>
       </div>
 
@@ -98,18 +98,29 @@ export default function TransactionsTab({
               const toAcct = t.to_account_id ? acctMap.get(t.to_account_id) : null
               const isIncome = t.type === 'income'
               const isExpense = t.type === 'expense'
-              const sign = isIncome ? '+' : isExpense ? '−' : ''
+              const isDebt = t.type === 'lend' || t.type === 'borrow' || t.type === 'repayment'
+              // Debt rows: money out (account_id) shows −, money in (to_account_id) shows +.
+              const debtOut = isDebt && !!t.account_id
+              const sign = isIncome ? '+' : isExpense ? '−' : isDebt ? (debtOut ? '−' : '+') : ''
               const isGoal = !!t.goal_id
               const goalWallet = acct?.name || toAcct?.name
-              const dotColor = cat?.color || (isGoal ? '#4CAF7D' : t.type === 'transfer' ? '#5B9BD5' : '#888')
+              const dotColor = cat?.color || (isGoal ? '#4CAF7D' : isDebt ? '#F5A623' : t.type === 'transfer' ? '#5B9BD5' : '#888')
               const title = isGoal
                 ? (t.note || 'Savings')
-                : t.type === 'transfer'
-                  ? `Transfer${acct ? ` from ${acct.name}` : ''}${toAcct ? ` → ${toAcct.name}` : ''}`
-                  : (cat?.name || (isIncome ? 'Income' : 'Expense'))
+                : t.type === 'lend'
+                  ? `💸 Lent to ${t.person || '?'}`
+                  : t.type === 'borrow'
+                    ? `💸 Borrowed from ${t.person || '?'}`
+                    : t.type === 'repayment'
+                      ? (debtOut ? `💸 Repaid ${t.person || '?'}` : `💸 ${t.person || '?'} repaid you`)
+                      : t.type === 'transfer'
+                        ? `Transfer${acct ? ` from ${acct.name}` : ''}${toAcct ? ` → ${toAcct.name}` : ''}`
+                        : (cat?.name || (isIncome ? 'Income' : 'Expense'))
               const meta = isGoal
                 ? [t.txn_date, goalWallet].filter(Boolean).join(' · ')
-                : [t.txn_date, t.note, t.type !== 'transfer' && acct ? acct.name : null].filter(Boolean).join(' · ')
+                : isDebt
+                  ? [t.txn_date, t.note, (acct || toAcct)?.name, t.type !== 'repayment' && t.is_settled ? '✓ settled' : null].filter(Boolean).join(' · ')
+                  : [t.txn_date, t.note, t.type !== 'transfer' && acct ? acct.name : null].filter(Boolean).join(' · ')
               const expanded = expandedId === t.id
               const effects = balMap.get(t.id) || []
               return (
@@ -120,7 +131,7 @@ export default function TransactionsTab({
                       <div className="bg-txn-title">{title}</div>
                       <div className="bg-txn-meta">{meta}</div>
                     </div>
-                    <div className={`bg-txn-amount ${isIncome ? 'amt-pos' : isExpense ? 'amt-neg' : ''}`}>
+                    <div className={`bg-txn-amount ${isIncome || (isDebt && !debtOut) ? 'amt-pos' : isExpense || debtOut ? 'amt-neg' : ''}`}>
                       {sign}{formatINR(t.amount)}
                     </div>
                     <div className="bg-txn-actions">

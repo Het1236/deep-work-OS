@@ -298,7 +298,7 @@ export type FinanceCategory = {
 export type Transaction = {
   id: string
   user_id: string
-  type: 'income' | 'expense' | 'transfer'
+  type: 'income' | 'expense' | 'transfer' | 'lend' | 'borrow' | 'repayment'
   amount: number
   category_id: string | null
   account_id: string | null
@@ -308,7 +308,24 @@ export type Transaction = {
   txn_date: string
   note: string | null
   recurring_id: string | null
+  // Udhaar (lend/borrow) fields
+  person?: string | null
+  parent_tx_id?: string | null
+  due_date?: string | null
+  is_settled?: boolean
   created_at: string
+}
+
+// A lend/borrow with its repayments folded in.
+export type DebtStatus = {
+  tx: Transaction
+  direction: 'lent' | 'borrowed'
+  person: string
+  original: number
+  repaid: number
+  outstanding: number
+  daysOut: number
+  overdue: boolean
 }
 
 export type CategorySpend = { categoryId: string; name: string; color: string; total: number }
