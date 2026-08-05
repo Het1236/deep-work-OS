@@ -2,48 +2,65 @@
 
 import {
   Dumbbell, Flame, Camera, ChefHat, Target, Loader2,
+  CalendarDays, BarChart3, Footprints, UtensilsCrossed,
 } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@/components/UserContext'
 import { getNutritionTargets, getMealsForDate, getMacroTrend, getMealPhotoUrl } from '@/lib/data'
+import { getActiveProgram, getExercises } from '@/lib/fitness/data'
 import { localYmd } from '@/lib/nutrition'
-import type { NutritionTargets, Meal, MacroDay } from '@/lib/types'
+import type { NutritionTargets, Meal, MacroDay, Program, Exercise } from '@/lib/types'
 import TodayTab from './components/TodayTab'
 import LogMealTab from './components/LogMealTab'
 import TargetsTab from './components/TargetsTab'
 import SuggestTab from './components/SuggestTab'
 import WorkoutsTab from './components/WorkoutsTab'
+import TrainTab from './components/TrainTab'
+import StatsTab from './components/StatsTab'
+import RunsTab from './components/RunsTab'
+import MealPlanTab from './components/MealPlanTab'
+import FitnessExtraStyles from './components/FitnessExtraStyles'
 
-type Tab = 'today' | 'log' | 'suggest' | 'workouts' | 'targets'
+type Tab = 'train' | 'stats' | 'runs' | 'plan' | 'today' | 'log' | 'suggest' | 'workouts' | 'targets'
 
 const TABS: { key: Tab; label: string; icon: typeof Flame }[] = [
+  { key: 'train', label: 'Train', icon: CalendarDays },
+  { key: 'stats', label: 'Stats', icon: BarChart3 },
+  { key: 'runs', label: 'Runs', icon: Footprints },
+  { key: 'plan', label: 'Meal Plan', icon: UtensilsCrossed },
   { key: 'today', label: 'Today', icon: Flame },
   { key: 'log', label: 'Log Meal', icon: Camera },
   { key: 'suggest', label: 'Suggest', icon: ChefHat },
-  { key: 'workouts', label: 'Workouts', icon: Dumbbell },
+  { key: 'workouts', label: 'History', icon: Dumbbell },
   { key: 'targets', label: 'Targets', icon: Target },
 ]
 
 export default function FitnessPage() {
   const { userId } = useUser()
-  const [tab, setTab] = useState<Tab>('today')
+  const [tab, setTab] = useState<Tab>('train')
   const [loading, setLoading] = useState(true)
   const [targets, setTargets] = useState<NutritionTargets | null>(null)
   const [meals, setMeals] = useState<Meal[]>([])
   const [trend, setTrend] = useState<MacroDay[]>([])
+  const [program, setProgram] = useState<Program | null>(null)
+  const [exercises, setExercises] = useState<Exercise[]>([])
 
   const loadAll = useCallback(async () => {
     if (!userId) return
     setLoading(true)
     const today = localYmd()
-    const [t, m, tr] = await Promise.all([
+    const [t, m, tr, p, ex] = await Promise.all([
       getNutritionTargets(userId),
       getMealsForDate(userId, today),
       getMacroTrend(userId, 14),
+      getActiveProgram(userId),
+      getExercises(),
     ])
     setTargets(t)
     setMeals(m)
     setTrend(tr)
+    setProgram(p)
+    setExercises(ex)
     setLoading(false)
   }, [userId])
 
@@ -71,7 +88,15 @@ export default function FitnessPage() {
 
       {loading ? (
         <div className="ft-loading"><Loader2 size={22} className="ft-spin" /> Loading…</div>
-      ) : !userId ? null : tab === 'today' ? (
+      ) : !userId ? null : tab === 'train' ? (
+        <TrainTab userId={userId} program={program} exercises={exercises} onChanged={loadAll} />
+      ) : tab === 'stats' ? (
+        <StatsTab userId={userId} program={program} />
+      ) : tab === 'runs' ? (
+        <RunsTab userId={userId} />
+      ) : tab === 'plan' ? (
+        <MealPlanTab userId={userId} targets={targets} onLogged={loadAll} />
+      ) : tab === 'today' ? (
         <TodayTab userId={userId} targets={targets} meals={meals} trend={trend}
           onChanged={loadAll} onGoTargets={() => setTab('targets')} getPhotoUrl={getMealPhotoUrl} />
       ) : tab === 'log' ? (
@@ -85,6 +110,7 @@ export default function FitnessPage() {
       )}
 
       <FitnessStyles />
+      <FitnessExtraStyles />
     </div>
   )
 }

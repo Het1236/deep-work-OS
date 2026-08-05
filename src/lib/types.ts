@@ -481,9 +481,13 @@ export type Workout = {
   title: string
   started_at: string
   ended_at: string | null
-  source: 'hevy_csv' | 'hevy_api' | 'manual'
+  source: 'hevy_csv' | 'hevy_api' | 'manual' | 'live'
   external_id: string | null
   created_at: string
+  program_day_id: string | null
+  notes: string | null
+  perceived_effort: number | null
+  duration_seconds: number | null
   workout_sets?: WorkoutSet[]
 }
 
@@ -492,11 +496,196 @@ export type WorkoutSet = {
   workout_id: string
   user_id: string
   exercise_title: string
+  exercise_id: string | null
   set_index: number
   set_type: string | null
   weight_kg: number | null
   reps: number | null
   distance_km: number | null
   duration_seconds: number | null
+  hold_seconds: number | null
+  is_warmup: boolean
+  is_pr: boolean
+  completed_at: string | null
   rpe: number | null
+}
+
+// ─── Exercise library ───────────────────────────────────────────
+// `metric_type` is the keystone: it decides which inputs the logger renders,
+// which stats are computable, and how a PR is defined for this movement.
+export type MetricType =
+  | 'weight_reps'           // squat, bench          → weight + reps
+  | 'reps'                  // push-up               → reps
+  | 'weighted_bodyweight'   // weighted pull-up      → added weight + reps
+  | 'assisted_bodyweight'   // assisted dip          → assistance + reps
+  | 'duration'              // plank                 → seconds
+  | 'weight_duration'       // isometric calf raise  → weight + hold seconds
+  | 'distance_duration'     // treadmill             → distance + time
+
+export type Equipment =
+  | 'barbell' | 'dumbbell' | 'machine' | 'cable'
+  | 'bodyweight' | 'smith' | 'kettlebell' | 'band' | 'other'
+
+export type Exercise = {
+  id: string
+  user_id: string | null
+  name: string
+  slug: string
+  metric_type: MetricType
+  primary_muscle: string
+  secondary_muscles: string[]
+  equipment: Equipment
+  form_cues: string[]
+  demo_url: string | null
+  is_isometric: boolean
+  default_rest_seconds: number
+  is_archived: boolean
+  created_at: string
+}
+
+// ─── Programme ──────────────────────────────────────────────────
+export type DayType = 'lift' | 'run' | 'rest'
+export type RunType = 'easy' | 'long' | 'tempo' | 'interval' | 'recovery' | 'strides'
+
+export type Program = {
+  id: string
+  user_id: string
+  name: string
+  description: string | null
+  block_number: number
+  weeks: number
+  start_date: string | null
+  is_active: boolean
+  created_at: string
+  program_days?: ProgramDay[]
+}
+
+export type ProgramDay = {
+  id: string
+  program_id: string
+  user_id: string
+  day_of_week: number          // 0 = Monday
+  day_type: DayType
+  title: string
+  scheduled_time: string | null
+  target_distance_km: number | null
+  run_type: RunType | null
+  notes: string | null
+  program_exercises?: ProgramExercise[]
+}
+
+export type ProgramExercise = {
+  id: string
+  program_day_id: string
+  user_id: string
+  exercise_id: string
+  order_index: number
+  target_sets: number
+  target_reps_min: number | null
+  target_reps_max: number | null
+  target_hold_seconds: number | null
+  rest_seconds: number
+  notes: string | null
+  exercises?: Exercise
+}
+
+// ─── Runs ───────────────────────────────────────────────────────
+export type Run = {
+  id: string
+  user_id: string
+  source: 'strava' | 'manual' | 'gpx'
+  external_id: string | null
+  started_at: string
+  name: string | null
+  distance_m: number
+  moving_time_s: number
+  elapsed_time_s: number | null
+  avg_hr: number | null
+  max_hr: number | null
+  elevation_gain_m: number | null
+  run_type: RunType | null
+  splits: unknown
+  program_day_id: string | null
+  created_at: string
+}
+
+// ─── Meal plan ──────────────────────────────────────────────────
+export type MealPlanItem = {
+  id: string
+  user_id: string
+  day_of_week: number          // 0 = Monday
+  slot_time: string
+  slot_label: string
+  meal_type: MealType
+  title: string
+  detail: string | null
+  kcal: number
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+  order_index: number
+  is_training: boolean
+  created_at: string
+}
+
+// ─── Live session (client-side draft shape) ─────────────────────
+export type DraftSet = {
+  key: string
+  weight_kg: number | null
+  reps: number | null
+  hold_seconds: number | null
+  duration_seconds: number | null
+  distance_km: number | null
+  rpe: number | null
+  is_warmup: boolean
+  done: boolean
+}
+
+export type DraftExercise = {
+  key: string
+  exercise_id: string
+  name: string
+  metric_type: MetricType
+  primary_muscle: string
+  form_cues: string[]
+  is_isometric: boolean
+  rest_seconds: number
+  target_sets: number
+  target_reps_min: number | null
+  target_reps_max: number | null
+  target_hold_seconds: number | null
+  sets: DraftSet[]
+}
+
+export type SessionDraft = {
+  title: string
+  startedAt: string
+  programDayId: string | null
+  exercises: DraftExercise[]
+}
+
+// ─── Stats ──────────────────────────────────────────────────────
+export type StreakDay = {
+  date: string
+  lifted: boolean
+  ran: boolean
+  volumeKg: number
+  distanceKm: number
+}
+
+export type MuscleVolume = { muscle: string; sets: number; volumeKg: number }
+export type E1rmPoint = { date: string; e1rm: number }
+export type RunTrendPoint = { date: string; distanceKm: number; paceSecPerKm: number; avgHr: number | null }
+
+export type MonthlyReport = {
+  month: string
+  lifts: number
+  runs: number
+  totalVolumeKg: number
+  totalDistanceKm: number
+  totalSets: number
+  prCount: number
+  adherencePct: number
+  avgRunPaceSecPerKm: number | null
+  bestLifts: { exercise: string; e1rm: number }[]
 }
