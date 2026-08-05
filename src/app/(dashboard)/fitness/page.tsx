@@ -2,7 +2,7 @@
 
 import {
   Dumbbell, Flame, Camera, ChefHat, Target, Loader2,
-  CalendarDays, BarChart3, Footprints, UtensilsCrossed,
+  CalendarDays, BarChart3, Footprints, UtensilsCrossed, Sunrise,
 } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@/components/UserContext'
@@ -19,11 +19,14 @@ import TrainTab from './components/TrainTab'
 import StatsTab from './components/StatsTab'
 import RunsTab from './components/RunsTab'
 import MealPlanTab from './components/MealPlanTab'
+import DayTab from './components/DayTab'
 import FitnessExtraStyles from './components/FitnessExtraStyles'
+import DayStyles from './components/DayStyles'
 
-type Tab = 'train' | 'stats' | 'runs' | 'plan' | 'today' | 'log' | 'suggest' | 'workouts' | 'targets'
+type Tab = 'day' | 'train' | 'stats' | 'runs' | 'plan' | 'today' | 'log' | 'suggest' | 'workouts' | 'targets'
 
 const TABS: { key: Tab; label: string; icon: typeof Flame }[] = [
+  { key: 'day', label: 'My Day', icon: Sunrise },
   { key: 'train', label: 'Train', icon: CalendarDays },
   { key: 'stats', label: 'Stats', icon: BarChart3 },
   { key: 'runs', label: 'Runs', icon: Footprints },
@@ -37,7 +40,7 @@ const TABS: { key: Tab; label: string; icon: typeof Flame }[] = [
 
 export default function FitnessPage() {
   const { userId } = useUser()
-  const [tab, setTab] = useState<Tab>('train')
+  const [tab, setTab] = useState<Tab>('day')
   const [loading, setLoading] = useState(true)
   const [targets, setTargets] = useState<NutritionTargets | null>(null)
   const [meals, setMeals] = useState<Meal[]>([])
@@ -88,7 +91,9 @@ export default function FitnessPage() {
 
       {loading ? (
         <div className="ft-loading"><Loader2 size={22} className="ft-spin" /> Loading…</div>
-      ) : !userId ? null : tab === 'train' ? (
+      ) : !userId ? null : tab === 'day' ? (
+        <DayTab userId={userId} />
+      ) : tab === 'train' ? (
         <TrainTab userId={userId} program={program} exercises={exercises} onChanged={loadAll} />
       ) : tab === 'stats' ? (
         <StatsTab userId={userId} program={program} />
@@ -111,6 +116,7 @@ export default function FitnessPage() {
 
       <FitnessStyles />
       <FitnessExtraStyles />
+      <DayStyles />
     </div>
   )
 }

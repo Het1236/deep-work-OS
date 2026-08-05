@@ -677,6 +677,175 @@ export type MuscleVolume = { muscle: string; sets: number; volumeKg: number }
 export type E1rmPoint = { date: string; e1rm: number }
 export type RunTrendPoint = { date: string; distanceKm: number; paceSecPerKm: number; avgHr: number | null }
 
+// ─── Schedule primitives ────────────────────────────────────────
+export type ClassScheduleItem = {
+  id: string
+  user_id: string
+  day_of_week: number          // 0 = Monday
+  start_time: string           // 'HH:MM:SS'
+  end_time: string
+  course_code: string | null
+  title: string
+  location: string | null
+  term: string | null
+  is_active: boolean
+}
+
+export type RoutineSettings = {
+  user_id: string
+  wake_time: string
+  routine_minutes: number
+  commute_minutes: number
+  sleep_time: string
+  winddown_minutes: number
+  gym_closed_from: string | null
+  gym_closed_to: string | null
+}
+
+export type DayOverride = {
+  id: string
+  user_id: string
+  date: string
+  kind: 'holiday' | 'exam' | 'travel' | 'skip_training' | 'custom'
+  note: string | null
+}
+
+// ─── Meal options ───────────────────────────────────────────────
+export type MealCategory =
+  | 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'pre_workout' | 'post_workout'
+
+export type MealOption = {
+  id: string
+  user_id: string
+  category: MealCategory
+  title: string
+  detail: string | null
+  recipe: string | null
+  kcal: number
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+  fibre_g: number
+  tags: string[]
+  prep_minutes: number | null
+  is_archived: boolean
+}
+
+// ─── Day plan ───────────────────────────────────────────────────
+export type BlockKind =
+  | 'sleep' | 'wake' | 'routine' | 'travel' | 'class'
+  | 'run' | 'lift' | 'mobility' | 'meal' | 'study' | 'winddown'
+
+export type TimelineBlock = {
+  start: string                // 'HH:MM'
+  end: string
+  kind: BlockKind
+  title: string
+  detail?: string
+  meta?: string
+  macros?: { kcal: number; protein_g: number }
+  mealPlanItemId?: string
+  conflict?: string            // surfaced, never silently resolved
+}
+
+export type DayPlan = {
+  date: string                 // 'YYYY-MM-DD'
+  dayOfWeek: number
+  blocks: TimelineBlock[]
+  warnings: string[]
+  totals: { kcal: number; protein_g: number }
+}
+
+// ─── HR zones & streams ─────────────────────────────────────────
+export type HrZones = {
+  user_id: string
+  max_hr: number
+  resting_hr: number
+  z1_max: number
+  z2_max: number
+  z3_max: number
+  z4_max: number
+  z5_max: number
+  source: 'manual' | 'strava' | 'estimated' | 'observed'
+}
+
+export type RunStream = {
+  run_id: string
+  user_id: string
+  time_s: number[]
+  heartrate: number[]
+  velocity_ms: number[]
+  cadence: number[]
+  altitude: number[]
+  distance_m: number[]
+}
+
+export type RunLap = {
+  id: string
+  run_id: string
+  lap_index: number
+  distance_m: number | null
+  moving_time_s: number | null
+  avg_hr: number | null
+  max_hr: number | null
+  avg_speed_ms: number | null
+}
+
+// ─── Load model ─────────────────────────────────────────────────
+export type ZoneSeconds = { z1: number; z2: number; z3: number; z4: number; z5: number }
+
+export type LoadPoint = { date: string; runLoad: number; liftLoad: number; total: number }
+
+export type AcwrPoint = {
+  date: string
+  acute: number
+  chronic: number
+  ratio: number
+  band: 'detraining' | 'optimal' | 'caution' | 'high_risk' | 'insufficient'
+}
+
+export type Decoupling = {
+  runId: string
+  date: string
+  percent: number
+  valid: boolean
+  reason?: string             // why it was suppressed
+}
+
+// ─── Readiness & prescriptions ──────────────────────────────────
+export type DailyReadiness = {
+  user_id: string
+  date: string
+  readiness: number
+  sleep_hours: number | null
+  resting_hr: number | null
+  soreness: number | null
+  note: string | null
+}
+
+export type PrescribedSession = {
+  kind: 'run' | 'lift' | 'rest'
+  title: string
+  distanceKm?: number
+  paceRange?: string
+  hrRange?: string
+  exercises?: { name: string; sets: number; reps: string }[]
+  adjustment?: 'hold' | 'reduce' | 'progress'
+}
+
+export type Prescription = {
+  id: string
+  user_id: string
+  date: string
+  program_day_id: string | null
+  status: 'proposed' | 'accepted' | 'modified' | 'skipped'
+  session: PrescribedSession
+  reasoning: string
+  inputs_used: string[]
+  flags: string[]
+  created_at: string
+}
+
 export type MonthlyReport = {
   month: string
   lifts: number

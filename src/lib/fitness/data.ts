@@ -6,7 +6,10 @@ import { createClient } from '@/lib/supabase/client'
 import type {
   Exercise, Program, ProgramDay, ProgramExercise, Run,
   MealPlanItem, SessionDraft, Workout, WorkoutSet, MetricType,
+  ClassScheduleItem, RoutineSettings, DayOverride, MealOption,
+  HrZones, DailyReadiness, Prescription, RunStream, DayPlan,
 } from '@/lib/types'
+import { buildDayPlan } from '@/lib/fitness/dayplan'
 
 const supabase = createClient()
 
@@ -288,6 +291,152 @@ export async function logPlannedMeal(userId: string, item: MealPlanItem, mealDat
     fat_g: item.fat_g,
   })
   if (error) throw error
+}
+
+// ─── Schedule primitives ──────────────────────────────────────
+export async function getClassSchedule(userId: string): Promise<ClassScheduleItem[]> {
+  const { data, error } = await supabase
+    .from('class_schedule').select('*')
+    .eq('user_id', userId).eq('is_active', true)
+    .order('day_of_week').order('start_time')
+  if (error) throw error
+  return (data || []) as ClassScheduleItem[]
+}
+
+export async function upsertClass(userId: string, c: Partial<ClassScheduleItem>): Promise<void> {
+  const { error } = await supabase.from('class_schedule').upsert({ user_id: userId, ...c })
+  if (error) throw error
+}
+
+export async function deleteClass(id: string): Promise<void> {
+  const { error } = await supabase.from('class_schedule').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function getRoutineSettings(userId: string): Promise<RoutineSettings | null> {
+  const { data } = await supabase.from('routine_settings').select('*').eq('user_id', userId).maybeSingle()
+  return (data as RoutineSettings) || null
+}
+
+export async function saveRoutineSettings(userId: string, s: Partial<RoutineSettings>): Promise<void> {
+  const { error } = await supabase.from('routine_settings')
+    .upsert({ user_id: userId, ...s, updated_at: new Date().toISOString() })
+  if (error) throw error
+}
+
+export async function getDayOverrides(userId: string, from: string, to: string): Promise<DayOverride[]> {
+  const { data } = await supabase.from('day_overrides').select('*')
+    .eq('user_id', userId).gte('date', from).lte('date', to)
+  return (data || []) as DayOverride[]
+}
+
+// ─── Meal options ─────────────────────────────────────────────
+export async function getMealOptions(userId: string): Promise<MealOption[]> {
+  const { data, error } = await supabase
+    .from('meal_options').select('*')
+    .eq('user_id', userId).eq('is_archived', false)
+    .order('category').order('protein_g', { ascending: false })
+  if (error) throw error
+  return (data || []) as MealOption[]
+}
+
+// The ONLY writer of selected_option_id. The coach layer must never call this —
+// meals change on explicit user action or not at all.
+export async function selectMealOption(planItemId: string, optionId: string): Promise<void> {
+  const { error } = await supabase
+    .from('meal_plan_items').update({ selected_option_id: optionId }).eq('id', planItemId)
+  if (error) throw error
+}
+
+export async function getMealPlanWithOptions(
+  userId: string,
+): Promise<(MealPlanItem & { option: MealOption | null })[]> {
+  const { data, error } = await supabase
+    .from('meal_plan_items')
+    .select('*, meal_options(*)')
+    .eq('user_id', userId)
+    .order('day_of_week').order('order_index')
+  if (error) throw error
+  return ((data || []) as (MealPlanItem & { meal_options: MealOption | null })[])
+    .map(r => ({ ...r, option: r.meal_options }))
+}
+
+// ─── Zones, readiness, prescriptions ──────────────────────────
+export async function getHrZones(userId: string): Promise<HrZones | null> {
+  const { data } = await supabase.from('hr_zones').select('*').eq('user_id', userId).maybeSingle()
+  return (data as HrZones) || null
+}
+
+export async function saveHrZones(userId: string, z: Partial<HrZones>): Promise<void> {
+  const { error } = await supabase.from('hr_zones')
+    .upsert({ user_id: userId, ...z, updated_at: new Date().toISOString() })
+  if (error) throw error
+}
+
+export async function getReadinessHistory(userId: string, days = 30): Promise<DailyReadiness[]> {
+  const since = new Date()
+  since.setDate(since.getDate() - days)
+  const { data } = await supabase.from('daily_readiness').select('*')
+    .eq('user_id', userId).gte('date', since.toISOString().slice(0, 10))
+    .order('date')
+  return (data || []) as DailyReadiness[]
+}
+
+export async function saveReadiness(userId: string, r: Partial<DailyReadiness> & { date: string }): Promise<void> {
+  const { error } = await supabase.from('daily_readiness')
+    .upsert({ user_id: userId, ...r }, { onConflict: 'user_id,date' })
+  if (error) throw error
+}
+
+export async function getPrescription(userId: string, date: string): Promise<Prescription | null> {
+  const { data } = await supabase.from('prescriptions').select('*')
+    .eq('user_id', userId).eq('date', date).maybeSingle()
+  return (data as Prescription) || null
+}
+
+export async function respondToPrescription(
+  id: string, status: 'accepted' | 'modified' | 'skipped',
+): Promise<void> {
+  const { error } = await supabase.from('prescriptions')
+    .update({ status, responded_at: new Date().toISOString() }).eq('id', id)
+  if (error) throw error
+}
+
+export async function getRunStreams(userId: string, runIds: string[]): Promise<RunStream[]> {
+  if (runIds.length === 0) return []
+  const { data } = await supabase.from('run_streams').select('*')
+    .eq('user_id', userId).in('run_id', runIds)
+  return (data || []) as RunStream[]
+}
+
+// ─── Composed day plan ────────────────────────────────────────
+// Fetches the primitives and hands them to the pure builder. All the logic
+// lives in dayplan.ts; this function only gathers inputs.
+export async function getDayPlan(userId: string, date: string): Promise<DayPlan> {
+  const dow = (new Date(`${date}T12:00:00`).getDay() + 6) % 7
+
+  const [classes, routine, overrides, plan, program] = await Promise.all([
+    getClassSchedule(userId),
+    getRoutineSettings(userId),
+    getDayOverrides(userId, date, date),
+    getMealPlanWithOptions(userId),
+    getActiveProgram(userId),
+  ])
+
+  const fallback: RoutineSettings = {
+    user_id: userId, wake_time: '05:00', routine_minutes: 90, commute_minutes: 60,
+    sleep_time: '22:00', winddown_minutes: 45, gym_closed_from: null, gym_closed_to: null,
+  }
+
+  return buildDayPlan({
+    date,
+    dayOfWeek: dow,
+    classes: classes.filter(c => c.day_of_week === dow),
+    programDay: program?.program_days?.find(d => d.day_of_week === dow) ?? null,
+    mealSlots: plan.filter(p => p.day_of_week === dow),
+    routine: routine ?? fallback,
+    overrides,
+  })
 }
 
 // ─── Stats bundle ─────────────────────────────────────────────
