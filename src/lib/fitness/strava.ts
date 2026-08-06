@@ -83,6 +83,18 @@ export async function refreshTokens(refreshToken: string): Promise<StravaTokens>
   }
 }
 
+// Refresh a minute early so a token can't expire mid-request. Kept free of any
+// database dependency — the caller supplies the row and a way to persist.
+export async function ensureFreshToken(
+  account: { access_token: string; refresh_token: string; expires_at: string },
+  save: (t: StravaTokens) => Promise<void>,
+): Promise<string> {
+  if (new Date(account.expires_at).getTime() - 60_000 >= Date.now()) return account.access_token
+  const fresh = await refreshTokens(account.refresh_token)
+  await save(fresh)
+  return fresh.access_token
+}
+
 export type StravaActivity = {
   id: number
   name: string
@@ -112,6 +124,62 @@ export async function fetchActivities(accessToken: string, afterUnix: number): P
     if (batch.length < 100) break
   }
   return out
+}
+
+// ─── Per-second streams ───────────────────────────────────────
+// The single most valuable endpoint: everything the load model needs that a
+// summary average cannot give — real time-in-zone, HR drift, decoupling.
+export type StravaStreams = {
+  time?: { data: number[] }
+  heartrate?: { data: number[] }
+  velocity_smooth?: { data: number[] }
+  cadence?: { data: number[] }
+  altitude?: { data: number[] }
+  distance?: { data: number[] }
+}
+
+const STREAM_KEYS = 'time,heartrate,velocity_smooth,cadence,altitude,distance'
+
+export class StravaRateLimit extends Error {
+  constructor() { super('Strava rate limit reached — wait 15 minutes and sync again.') }
+}
+
+async function get<T>(url: string, accessToken: string): Promise<T | null> {
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
+  if (res.status === 429) throw new StravaRateLimit()
+  if (res.status === 404) return null            // activity deleted or not visible
+  if (!res.ok) throw new Error(`Strava request failed (${res.status}) for ${url}`)
+  return (await res.json()) as T
+}
+
+export async function fetchStreams(accessToken: string, activityId: string): Promise<StravaStreams | null> {
+  return get<StravaStreams>(
+    `${STRAVA_API}/activities/${activityId}/streams?keys=${STREAM_KEYS}&key_by_type=true`,
+    accessToken)
+}
+
+export type StravaLap = {
+  lap_index: number
+  distance: number
+  moving_time: number
+  average_heartrate?: number
+  max_heartrate?: number
+  average_speed?: number
+}
+
+export async function fetchLaps(accessToken: string, activityId: string): Promise<StravaLap[] | null> {
+  return get<StravaLap[]>(`${STRAVA_API}/activities/${activityId}/laps`, accessToken)
+}
+
+export type StravaDetail = {
+  splits_metric?: unknown
+  suffer_score?: number
+  average_cadence?: number
+  calories?: number
+}
+
+export async function fetchDetail(accessToken: string, activityId: string): Promise<StravaDetail | null> {
+  return get<StravaDetail>(`${STRAVA_API}/activities/${activityId}`, accessToken)
 }
 
 export function isRun(a: StravaActivity): boolean {

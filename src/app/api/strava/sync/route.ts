@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { fetchActivities, refreshTokens, isRun, classifyRun, stravaConfigured } from '@/lib/fitness/strava'
+import { fetchActivities, ensureFreshToken, isRun, classifyRun, stravaConfigured } from '@/lib/fitness/strava'
 
 export async function POST() {
   if (!stravaConfigured()) {
@@ -18,18 +18,12 @@ export async function POST() {
     .maybeSingle()
   if (!account) return NextResponse.json({ error: 'Strava not connected' }, { status: 400 })
 
-  let accessToken: string = account.access_token
   try {
-    // Refresh a minute early so a token can't expire mid-request.
-    if (new Date(account.expires_at).getTime() - 60_000 < Date.now()) {
-      const fresh = await refreshTokens(account.refresh_token)
-      accessToken = fresh.access_token
+    const accessToken = await ensureFreshToken(account, async t => {
       await supabase.from('strava_accounts').update({
-        access_token: fresh.access_token,
-        refresh_token: fresh.refresh_token,
-        expires_at: fresh.expires_at,
+        access_token: t.access_token, refresh_token: t.refresh_token, expires_at: t.expires_at,
       }).eq('user_id', user.id)
-    }
+    })
 
     // First sync pulls 180 days; later syncs pull from a day before last sync
     // so an activity edited just after a sync is still picked up.

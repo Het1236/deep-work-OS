@@ -3,7 +3,7 @@
 // Runs: Strava connect + sync, manual entry, and the run log.
 
 import { useState, useEffect, useCallback } from 'react'
-import { Footprints, RefreshCw, Link2, Plus, Trash2, Loader2, Check, X, Heart, Mountain, Settings } from 'lucide-react'
+import { Footprints, RefreshCw, Link2, Plus, Trash2, Loader2, Check, X, Heart, Mountain, Settings, Activity } from 'lucide-react'
 import { getRuns, createRun, deleteRun } from '@/lib/fitness/data'
 import { formatPace, formatDuration, paceSecPerKm, km } from '@/lib/fitness/stats'
 import type { Run, RunType } from '@/lib/types'
@@ -15,6 +15,7 @@ export default function RunsTab({ userId }: { userId: string }) {
   const [status, setStatus] = useState<{ configured: boolean; connected: boolean; lastSyncedAt: string | null } | null>(null)
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
+  const [pulling, setPulling] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
@@ -59,6 +60,27 @@ export default function RunsTab({ userId }: { userId: string }) {
     } finally { setSyncing(false) }
   }
 
+  // Streams are the expensive call — one batch at a time, and we report what is
+  // left rather than looping until Strava rate-limits us mid-fetch.
+  async function pullStreams() {
+    setPulling(true); setError(null); setMsg(null)
+    try {
+      const res = await fetch('/api/strava/streams', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+      })
+      const j = await res.json()
+      if (!res.ok) throw new Error(j.error || 'Stream fetch failed')
+      setMsg(
+        j.fetched === 0
+          ? (j.message ?? 'Nothing left to fetch.')
+          : `Pulled detail for ${j.fetched} run${j.fetched === 1 ? '' : 's'} · ${j.withHeartRate} with heart rate` +
+            (j.remaining > 0 ? ` · ${j.remaining} still to go, run it again` : ''))
+      load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Stream fetch failed')
+    } finally { setPulling(false) }
+  }
+
   async function remove(r: Run) {
     if (!confirm('Delete this run?')) return
     await deleteRun(r.id); load()
@@ -88,6 +110,11 @@ export default function RunsTab({ userId }: { userId: string }) {
                onClick={e => { if (!status?.configured) e.preventDefault() }}>
               <Link2 size={15} /> Connect Strava
             </a>
+          )}
+          {status?.connected && (
+            <button className="ft-btn" onClick={pullStreams} disabled={pulling}>
+              {pulling ? <Loader2 size={15} className="ft-spin" /> : <Activity size={15} />} Pull heart-rate detail
+            </button>
           )}
           <button className="ft-btn" onClick={() => setAdding(a => !a)}>
             <Plus size={15} /> Log manually
