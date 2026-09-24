@@ -30,13 +30,18 @@ export async function sendMessage(chatId: number | string, text: string, buttons
   })
 }
 
-export async function editMessageText(chatId: number | string, messageId: number, text: string) {
+export async function editMessageText(chatId: number | string, messageId: number, text: string, buttons?: InlineButton[][]) {
   return call('editMessageText', {
     chat_id: chatId,
     message_id: messageId,
     text,
     parse_mode: 'HTML',
+    ...(buttons ? { reply_markup: { inline_keyboard: buttons } } : {}),
   })
+}
+
+export async function editMessageReplyMarkup(chatId: number | string, messageId: number, buttons: InlineButton[][]) {
+  return call('editMessageReplyMarkup', { chat_id: chatId, message_id: messageId, reply_markup: { inline_keyboard: buttons } })
 }
 
 export async function answerCallbackQuery(callbackQueryId: string, text?: string) {
