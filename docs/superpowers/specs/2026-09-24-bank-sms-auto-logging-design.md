@@ -37,8 +37,8 @@ never deleted, so their history is preserved.
 
 ## Data model changes
 
-### `accounts`
-- `account_last4 text null`
+### `finance_accounts`
+- `account_last4 text null`. The existing `kalupur` and `SBI` wallets get `2270` and `3424`.
 
 ### `transactions`
 - `source text not null default 'manual'`, one of `manual|sms|email|telegram`
@@ -54,6 +54,7 @@ Raw audit trail and review inbox. Every SMS and email is stored **before** parsi
 | id | uuid pk | |
 | user_id | uuid | |
 | kind | text | `sms` \| `email` |
+| external_id | text null | Gmail message id; unique `(user_id, kind, external_id)` |
 | sender | text | SMS sender ID or email from-address |
 | subject | text null | email only |
 | body | text | raw text |
@@ -66,8 +67,8 @@ Raw audit trail and review inbox. Every SMS and email is stored **before** parsi
 RLS: owner-only select/update; inserts happen through the service role.
 
 ### New: `merchant_rules`
-`id, user_id, match text` (a merchant key or counterparty substring), `category_id`,
-`kind` (`merchant` \| `counterparty`), `created_at`, unique `(user_id, kind, match)`.
+`id, user_id, match text` (lowercase substring tested against the normalised counterparty
+and narration; the longest match wins), `category_id`, `created_at`, unique `(user_id, match)`.
 Seeded rules:
 
 - counterparty `JIGNESH` → **Allowance** (father)
@@ -77,9 +78,9 @@ Seeded rules:
 **Subscriptions**, **Fitness & Sports**, **Bank Charges** (expense); **TA Salary** (income).
 
 ### Balance reset
-A one-time "Set current balances" screen. For each active wallet the user enters
-today's real balance, and `adjustWalletBalance` adds a reconcile transaction dated
-today. No existing transaction is changed or deleted. This ships **before** SMS goes live.
+The budget page already has `ReconcileModal` → `adjustWalletBalance`, which adds a dated
+adjustment transaction. Het uses it once for Kalupur, SBI and Cash **before** SMS goes live.
+No new screen is needed, and no existing transaction is changed or deleted.
 
 ## Ingest endpoints
 
@@ -133,10 +134,10 @@ They use `createAdminClient()` and resolve the single user the same way the Tele
   order senders with `newer_than:1d -label:LifeOS/logged`, posts the messages, then applies the label.
 - The server extracts `{ platform, order_id, total, items[] }`: regex for the major platforms,
   Groq for the rest. Messages that aren't orders (shipping updates, promos) → `ignored`.
-- **Match:** an `sms`-sourced expense with |amount − total| ≤ ₹1 whose originating SMS signal's
-  `received_at` is within ±30 min of the email date, and with no `details` yet. (Timing uses
-  `inbound_signals.received_at` because `txn_date` is a date only.) On a match: attach `details`,
-  set merchant and category (via rules), mark the signal `enriched`, and edit the Telegram ping.
+- **Match:** an `sms`-sourced expense with |amount − total| ≤ ₹1, `created_at` (≈ SMS arrival,
+  since `txn_date` is a date only) within ±30 min of the email date, and no `details` yet.
+  On a match: attach `details`, set the merchant, set the category via rules if it is still Misc
+  or empty, mark the signal `enriched`, and send a short follow-up ping with the items.
 - **No match** → `pending_match`. Each SMS insert and each email-endpoint call re-checks pending
   signals: a match enriches the expense. A signal older than 2 h with no match becomes its own
   expense (`source='email'`). Email alone can't tell which wallet paid, so the ping asks with
@@ -160,9 +161,9 @@ They use `createAdminClient()` and resolve the single user the same way the Tele
 - **Budget page:** a "Review inbox" card (signals with `needs_review`) where each row offers
   fix / assign wallet / ignore; 📱 / ✉️ source badges on transactions; order items shown when
   `details` is present.
-- **Settings → Auto-logging:** setup instructions for MacroDroid and Apps Script, the last signal
-  received, and a "send test" button.
-- **Balance reset screen** (see above).
+- The review inbox header shows when the last SMS and the last email arrived, a quick way to
+  notice that MacroDroid or the Apps Script has stopped. There is no separate Settings page;
+  the setup steps live in this spec.
 
 ## Error handling
 
@@ -189,8 +190,8 @@ They use `createAdminClient()` and resolve the single user the same way the Tele
 
 ## Rollout order
 
-1. Migrations, new wallets, and the balance-reset screen (Het enters today's balances).
+1. Migrations, wallet last-4 digits, and seed rules and categories. Het reconciles balances with the existing modal.
 2. SMS parsers + fixtures, `/api/ingest/sms`, Telegram ping (SMS goes live).
 3. Category change callback and merchant-rule learning.
 4. Email ingest, matching, and the Apps Script.
-5. Budget review inbox, source badges, Settings page.
+5. Budget review inbox and source badges.
