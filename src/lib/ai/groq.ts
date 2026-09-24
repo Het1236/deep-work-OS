@@ -1,7 +1,8 @@
 import type { AIMessage, AICompletionOptions, AIProvider } from './types'
 import { AINotConfiguredError } from './types'
 
-const MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
+// llama-3.3-70b-versatile was retired by Groq (404 model_not_found, 2026-09).
+const MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b'
 
 export function createGroqProvider(): AIProvider {
   const key = process.env.GROQ_API_KEY

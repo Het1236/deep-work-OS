@@ -80,3 +80,16 @@ export function parseBankSms(body: string): ParsedSms | null {
 
   return { bank, direction, amount, date, last4, ref, counterparty, balance, narration }
 }
+
+// "Zomato <noreply@mail.zomato.com>" → "zomato"
+export function platformFrom(from: string): string {
+  const domain = from.match(/@([\w.-]+)/)?.[1]?.toLowerCase() ?? from.toLowerCase()
+  const skip = new Set(['com', 'in', 'co', 'net', 'bike', 'www', 'mail', 'email', 'e', 'm', 'mailer', 'info'])
+  const parts = domain.split('.').filter(p => p && !skip.has(p))
+  return parts[parts.length - 1] || domain
+}
+
+export function regexOrderTotal(body: string): number | null {
+  const m = body.match(/(?:grand total|order total|total amount|amount paid|total paid|total payable|you paid)\s*:?\s*(?:₹|rs\.?|inr)\s*([\d,]+(?:\.\d{1,2})?)/i)
+  return m ? toNum(m[1]) : null
+}

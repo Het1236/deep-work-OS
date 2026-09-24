@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { applyCapture } from '@/lib/capture/apply'
 import { sendMessage, answerCallbackQuery, escapeHtml, type InlineButton } from '@/lib/telegram/api'
+import { handleAutologCallback } from '@/lib/autolog/callbacks'
 
 // Telegram delivers updates here. Always reply 200 fast (Telegram retries otherwise).
 
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
     const callback = (update as any).callback_query
 
     if (callback) {
+      if (await handleAutologCallback(admin, callback)) return NextResponse.json({ ok: true })
       const data: string = callback.data || ''
       const m = data.match(/^u:([a-z]+):(.+)$/)
       if (m && UNDO_TABLE[m[1]]) {

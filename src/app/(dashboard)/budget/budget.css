@@ -544,3 +544,26 @@
 .bg-goal-badge { font-size: 0.625rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; padding: 3px 8px; border-radius: var(--radius-full); background: var(--accent-subtle); color: var(--accent); }
 .bg-btn--sm { padding: 6px 12px; font-size: 0.75rem; }
 .bg-btn--full { flex: 1; justify-content: center; }
+
+/* Auto-log review inbox (matches the Udhaar card) */
+.rv-card { display: flex; align-items: center; gap: 13px; width: 100%; text-align: left; cursor: pointer; padding: 14px 16px; margin-bottom: 12px; border: 1px solid var(--border-subtle); transition: all .18s; }
+.rv-card:hover { border-color: var(--border-hover); transform: translateY(-1px); }
+.rv-card-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--accent-subtle); color: var(--accent); }
+.rv-card-main { flex: 1; min-width: 0; }
+.rv-card-title { font-size: 0.8125rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+.rv-card-sub { font-size: 0.75rem; color: var(--text-tertiary); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rv-card-open { font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap; }
+.rv-badge { background: var(--accent); color: var(--on-accent); border-radius: var(--radius-full); font-size: 0.6875rem; padding: 1px 7px; }
+.rv-empty { color: var(--text-tertiary); padding: 12px 0; font-size: 0.8125rem; }
+.rv-list { display: flex; flex-direction: column; gap: 10px; max-height: 60vh; overflow-y: auto; }
+.rv-item { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 12px; }
+.rv-item-head { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--text-tertiary); }
+.rv-time { margin-left: auto; }
+.rv-subject { font-weight: 600; margin-top: 4px; color: var(--text-primary); font-size: 0.8125rem; }
+.rv-body { font-size: 0.8125rem; margin-top: 4px; color: var(--text-secondary); white-space: pre-wrap; word-break: break-word; }
+.rv-error { font-size: 0.75rem; color: var(--status-danger); margin-top: 4px; word-break: break-word; }
+.rv-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.rv-hint { font-size: 0.75rem; color: var(--text-tertiary); flex: 1; }
+.tx-src { font-size: 0.6875rem; margin-left: 6px; opacity: .85; }
+.tx-items { font-size: 0.75rem; color: var(--text-secondary); }
+@media (max-width: 480px) { .rv-card-open { display: none; } }

@@ -128,7 +128,11 @@ export default function TransactionsTab({
                   <div className="bg-txn-row" style={{ cursor: 'pointer' }} onClick={() => setExpandedId(expanded ? null : t.id)}>
                     <span className="bg-txn-dot" style={{ background: dotColor }} />
                     <div className="bg-txn-main">
-                      <div className="bg-txn-title">{title}</div>
+                      <div className="bg-txn-title">
+                        {title}
+                        {t.source === 'sms' && <span className="tx-src" title="Logged from bank SMS">📱</span>}
+                        {t.source === 'email' && <span className="tx-src" title="Logged from order email">✉️</span>}
+                      </div>
                       <div className="bg-txn-meta">{meta}</div>
                     </div>
                     <div className={`bg-txn-amount ${isIncome || (isDebt && !debtOut) ? 'amt-pos' : isExpense || debtOut ? 'amt-neg' : ''}`}>
@@ -142,6 +146,11 @@ export default function TransactionsTab({
                   </div>
                   {expanded && (
                     <div style={{ padding: '6px 4px 12px 22px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {t.details?.items?.length ? (
+                        <div className="tx-items">
+                          🛍️ {t.details.platform}: {t.details.items.map(i => `${i.name}${i.qty > 1 ? ` ×${i.qty}` : ''}`).join(', ')}
+                        </div>
+                      ) : null}
                       {effects.length === 0 ? (
                         <div style={{ fontSize: '0.6875rem', color: 'var(--text-tertiary)' }}>No wallet movement recorded.</div>
                       ) : effects.map((e, i) => (

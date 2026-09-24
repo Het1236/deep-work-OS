@@ -1,5 +1,5 @@
 // Run: node scripts/test-autolog.mts   (Node 22.18+ strips TS types)
-import { parseBankSms, isNoise, parseSmsDate, detectBank } from '../src/lib/autolog/parse.ts'
+import { parseBankSms, isNoise, parseSmsDate, detectBank, platformFrom, regexOrderTotal } from '../src/lib/autolog/parse.ts'
 import { classify, normalizeMerchant, firstNameMatch } from '../src/lib/autolog/classify.ts'
 
 let failed = 0
@@ -64,5 +64,13 @@ const ATM = 'A/C XX2270 IS DEBITED BY RS.500.00 ON 02-10-2026 BY ATM CASH WDL. A
 eq('ATM → transfer to cash', pick(classify(parseBankSms(ATM)!, ATM, ctx)), { type: 'transfer', accountId: 'wK', toAccountId: 'wC', categoryId: null, merchant: null, needsReview: false, udhaar: null, askTa: false })
 const UNK = 'A/c XX9999 debited by Rs.10.00 on 25-08-26 RefNo 111111 - KCCBL'
 eq('unknown last4 → review', classify(parseBankSms(UNK)!, UNK, ctx).kind, 'review')
+
+console.log('email helpers')
+eq('platform amazon', platformFrom('Amazon.in <auto-confirm@amazon.in>'), 'amazon')
+eq('platform zomato', platformFrom('Zomato <noreply@mail.zomato.com>'), 'zomato')
+eq('platform ola', platformFrom('Ola <info@e.olacabs.com>'), 'olacabs')
+eq('total grand', regexOrderTotal('Item total ₹600\nGrand Total: ₹649.00\nThanks'), 649)
+eq('total rs', regexOrderTotal('Amount Paid Rs. 1,299'), 1299)
+eq('total none', regexOrderTotal('Your package was delivered'), null)
 
 if (failed) { console.log(`\n${failed} failed`); process.exit(1) } else console.log('\nall passed')

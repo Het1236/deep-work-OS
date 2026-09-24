@@ -15,6 +15,7 @@ import { Loader2, Wallet, TrendingUp, TrendingDown, Scale, ChevronLeft, ChevronR
 import OverviewTab from './OverviewTab'
 import TransactionsTab from './TransactionsTab'
 import UdhaarCard from './UdhaarCard'
+import ReviewInboxCard from './ReviewInboxCard'
 import BudgetsTab from './BudgetsTab'
 import GoalsTab from './GoalsTab'
 import './budget.css'
@@ -105,6 +106,7 @@ export default function BudgetPage() {
         })}
       </div>
 
+      <ReviewInboxCard userId={userId!} onChanged={() => { load(); triggerRefresh() }} />
       <UdhaarCard userId={userId!} accounts={accounts} onChanged={() => { load(); triggerRefresh() }} />
 
       <div className="bg-tabs">

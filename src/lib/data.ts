@@ -3,7 +3,7 @@ import type {
   Profile, DeepWorkSession, Habit, HabitLog,
   Goal, Project, Task, JournalEntry, TimeBlock,
   Achievement, XPEvent, DashboardStats, Group, Note, PlannerBlock, ScoreboardData,
-  FinanceAccount, FinanceCategory, Transaction, BudgetOverview, CategorySpend, DailySpend,
+  FinanceAccount, FinanceCategory, Transaction, BudgetOverview, CategorySpend, DailySpend, InboundSignal,
   CategoryBudgetStatus, SavingsGoal, SavingsContribution, SavingsGoalStatus,
   RecurringRule, MonthlyTrend,
   GtdContext, AreaOfFocus, NotificationSettings, GtdBucket,
@@ -1855,6 +1855,27 @@ export async function moveGoalMoney(
     await supabase.from('savings_goals').update({ is_achieved: false }).eq('id', goal.id)
   }
   return { justAchieved }
+}
+
+// ─── Auto-logging review inbox ───
+export async function getReviewSignals(userId: string): Promise<InboundSignal[]> {
+  const { data, error } = await supabase.from('inbound_signals').select('*')
+    .eq('user_id', userId).eq('status', 'needs_review').order('received_at', { ascending: false }).limit(50)
+  if (error) throw error
+  return (data || []) as InboundSignal[]
+}
+export async function dismissSignal(id: string): Promise<void> {
+  const { error } = await supabase.from('inbound_signals').update({ status: 'ignored' }).eq('id', id)
+  if (error) throw error
+}
+export async function getLastSignalTimes(userId: string): Promise<{ sms: string | null; email: string | null }> {
+  const last = async (kind: 'sms' | 'email') => {
+    const { data } = await supabase.from('inbound_signals').select('received_at').eq('user_id', userId).eq('kind', kind)
+      .order('received_at', { ascending: false }).limit(1).maybeSingle()
+    return (data?.received_at as string | undefined) ?? null
+  }
+  const [sms, email] = await Promise.all([last('sms'), last('email')])
+  return { sms, email }
 }
 
 // Reconcile a wallet to its true balance by inserting an adjustment transaction
