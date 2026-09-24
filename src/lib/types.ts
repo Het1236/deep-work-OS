@@ -276,6 +276,7 @@ export type FinanceAccount = {
   color: string | null
   is_active: boolean
   sort_order: number
+  account_last4?: string | null
   created_at: string
 }
 
@@ -313,6 +314,11 @@ export type Transaction = {
   parent_tx_id?: string | null
   due_date?: string | null
   is_settled?: boolean
+  // Auto-logging
+  source?: 'manual' | 'sms' | 'email' | 'telegram'
+  merchant?: string | null
+  bank_ref?: string | null
+  details?: { platform?: string; order_id?: string | null; items?: { name: string; qty: number; price: number | null }[] } | null
   created_at: string
 }
 
@@ -326,6 +332,24 @@ export type DebtStatus = {
   outstanding: number
   daysOut: number
   overdue: boolean
+}
+
+// Raw bank SMS / order email captured by the auto-logging ingest routes.
+export type SignalStatus = 'logged' | 'enriched' | 'pending_match' | 'needs_review' | 'ignored' | 'duplicate'
+export type InboundSignal = {
+  id: string
+  user_id: string
+  kind: 'sms' | 'email'
+  external_id: string | null
+  sender: string | null
+  subject: string | null
+  body: string
+  received_at: string
+  parsed: Record<string, unknown> | null
+  status: SignalStatus
+  transaction_id: string | null
+  error: string | null
+  created_at: string
 }
 
 export type CategorySpend = { categoryId: string; name: string; color: string; total: number }
